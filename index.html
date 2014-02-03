@@ -1,0 +1,108 @@
+<!doctype html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Test</title>
+  <style>
+    body { background: #fff; color: #222; font-family: Arial; font-size: 14px;}
+    table { width: 100%;}
+    th { border-bottom: 1px solid #ccc; background: #eee; text-align: left; font-size:120%;}
+    td { min-width: 150px; padding: 4px;}
+    h2 { background: #ccc;}
+    button { margin-right:1em;}
+    #content { width: 1000px; margin: auto;}
+    #logg { font-family: monospace; list-style-type: none; padding:0; margin:0 ;}
+    .active:before { color: green; font-size:30px; content: '• '; vertical-align: middle;}
+    .hidden { display: none;}
+  </style>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+</head>
+  <div id="content">
+
+  <h1>Test av RFID-HUB</h1>
+
+  <h2>Tilkoblede RFID-enheter</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>IP-addresse</th>
+        <th>Interaksjon med enheten</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="unit hidden">
+        <td class="active">10.172.2.233</td>
+        <td>
+          <button class="scan-start">Start scanning</button>
+          <button class="scan-stop">Stop scanning</button>
+          <button class="alarm-on">Aktivér alarm</button>
+          <button class="alarm-off">Deaktivér alarm</button>
+          <input class="bytestring" type="text" placeholder="bytestreng"/>
+          <button class="write">Prege brikke</button>
+        </td>
+      </tr>
+      {{range .Units}}
+        <tr class="unit" id="unit-{{.}}">
+          <td class="active">{{.}}</td>
+          <td>
+            <button class="scan-start">Start scanning</button>
+            <button class="scan-stop">Stop scanning</button>
+            <button class="alarm-on">Aktivér alarm</button>
+            <button class="alarm-off">Deaktivér alarm</button>
+            <input class="bytestring" type="text" placeholder="bytestreng"/>
+            <button class="write">Prege brikke</button>
+          </td>
+        </tr>
+      {{end}}
+    </tbody>
+  </table>
+
+  <h2>Kommunikasjonslogg</h2>
+
+  <ul id="logg">
+    <li></li>
+  </ul>
+
+</div>
+
+<body>
+  <script>
+  $(document).ready(function() {
+    var ws=new WebSocket('ws://{{.Host}}/ws');
+    ws.onopen = function() {
+      console.log("connected");
+
+      ws.onmessage = function(resp) {
+        var data = JSON.parse(resp.data);
+        console.log(data);
+        switch (data.Type) {
+          case "CONNECT":
+            var $tr = $('tr.hidden').clone().removeClass('hidden');
+            $tr.attr('id', 'unit-'+data.ID);
+            $tr.find('.active').html(data.ID);
+            $('tbody').append($tr);
+            var logLine = new Date() + " - RFID-unit connected: "+data.ID;
+            $('#logg').prepend('<li>'+logLine+'</li>');
+            break;
+          case "DISCONNECT":
+            $(document.getElementById('unit-'+data.ID)).remove();
+            var logLine = new Date() + " - RFID-unit disconnected: "+data.ID;
+            $('#logg').prepend('<li>'+logLine+'</li>');
+            break;
+        }
+      };
+    };
+    ws.onclose = function() {
+      console.log("disconected");
+      // TODO try to reconnecd SetInterval 1 sec
+    };
+
+    $('table').on('click', '.scan-start', function() {
+      var id = $(this).parents('tr').attr('id');
+      console.log("scanning:"+id);
+    });
+  });
+  </script>
+</body>
+</html>
