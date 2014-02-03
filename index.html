@@ -11,6 +11,8 @@
     td { min-width: 150px; padding: 4px;}
     h2 { background: #ccc;}
     button { margin-right:1em;}
+    li { margin-bottom:0.3em;}
+    li:nth-child(odd) { background: #eee;}
     #content { width: 1000px; margin: auto;}
     #logg { font-family: monospace; list-style-type: none; padding:0; margin:0 ;}
     .active:before { color: green; font-size:30px; content: '• '; vertical-align: middle;}
@@ -68,6 +70,11 @@
 
 <body>
   <script>
+  function log(line) {
+    var logLine = new Date() + line;
+     $('#logg').prepend('<li>'+logLine+'</li>');
+  }
+
   $(document).ready(function() {
     var ws=new WebSocket('ws://{{.Host}}/ws');
     ws.onopen = function() {
@@ -82,13 +89,11 @@
             $tr.attr('id', 'unit-'+data.ID);
             $tr.find('.active').html(data.ID);
             $('tbody').append($tr);
-            var logLine = new Date() + " - RFID-unit connected: "+data.ID;
-            $('#logg').prepend('<li>'+logLine+'</li>');
+            log(" -- RFID-unit connected: "+data.ID);
             break;
           case "DISCONNECT":
             $(document.getElementById('unit-'+data.ID)).remove();
-            var logLine = new Date() + " - RFID-unit disconnected: "+data.ID;
-            $('#logg').prepend('<li>'+logLine+'</li>');
+            log(" -- RFID-unit disconnected: "+data.ID);
             break;
         }
       };
@@ -100,7 +105,7 @@
 
     $('table').on('click', '.scan-start', function() {
       var id = $(this).parents('tr').attr('id');
-      console.log("scanning:"+id);
+      log(' -> {"Cmd": "START-SCAN", "ID":"' + id.substring(5)+ '"}');
     });
   });
   </script>
