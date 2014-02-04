@@ -34,6 +34,8 @@ func (u *RFIDUnit) run() {
 			log.Println("<- UI:", msg)
 		case <-u.Quit:
 			// cleanup
+			log.Println("INFO", "Shutting down RFID-unit statemachine:", u.conn.RemoteAddr().String())
+			close(u.ToRFID)
 			return
 		}
 	}
@@ -58,13 +60,13 @@ func (u *RFIDUnit) tcpWriter() {
 	for msg := range u.ToRFID {
 		_, err := w.Write(msg)
 		if err != nil {
-			log.Println(err)
+			log.Println("ERR ", err)
 			break
 		}
 		log.Println("-> RFIDUnit:", strings.TrimRight(string(msg), "\n"))
 		err = w.Flush()
 		if err != nil {
-			log.Println(err)
+			log.Println("ERR ", err)
 			break
 		}
 	}

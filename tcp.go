@@ -20,7 +20,7 @@ type TCPServer struct {
 func (srv TCPServer) run() {
 	ln, err := net.Listen("tcp", srv.listenAddr)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("ERR ", err)
 	}
 	defer ln.Close()
 
@@ -29,7 +29,7 @@ func (srv TCPServer) run() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println(err)
+			log.Println("ERR ", err)
 			continue
 		}
 		go srv.handleConnection(conn)
