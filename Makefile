@@ -20,7 +20,7 @@ todo:
 
 test:
 	@go test -i
-	@go test
+	@go test --race
 
 integration:
 	@go test -tags integration

@@ -15,6 +15,9 @@ type TCPServer struct {
 	rmChan      chan *RFIDUnit             // Remove a RFIDUnit
 	incoming    chan []byte                // Incoming messages (going to) RFIDUnits from UI
 	outgoing    chan encaspulatedUIMessage // Outgoing messages to UI
+
+	// Channel to broadcast to (normally handled by websocket hub)
+	broadcast chan UIMessage
 }
 
 // run listens for and accept incomming connections. It is meant to run in
@@ -46,6 +49,7 @@ func newTCPServer(cfg *config) *TCPServer {
 		rmChan:      make(chan *RFIDUnit),
 		incoming:    make(chan []byte),
 		outgoing:    make(chan encaspulatedUIMessage),
+		broadcast:   make(chan UIMessage),
 	}
 }
 
@@ -59,12 +63,12 @@ func (srv TCPServer) handleMessages() {
 		case unit := <-srv.addChan:
 			log.Printf("TCP [%v] RFID-unit connected\n", unit.conn.RemoteAddr())
 			srv.connections[unit.conn.RemoteAddr().String()] = unit
-			uiHub.broadcast <- UIMessage{
+			srv.broadcast <- UIMessage{
 				Type: "CONNECT",
 				ID:   unit.conn.RemoteAddr().String()}
 		case unit := <-srv.rmChan:
 			log.Printf("TCP [%v] RFID-unit disconnected\n", unit.conn.RemoteAddr())
-			uiHub.broadcast <- UIMessage{
+			srv.broadcast <- UIMessage{
 				Type: "DISCONNECT",
 				ID:   unit.conn.RemoteAddr().String()}
 			delete(srv.connections, unit.conn.RemoteAddr().String())
@@ -85,7 +89,7 @@ func (srv TCPServer) handleMessages() {
 			log.Println("<-", "UI to", idMsg.ID, string(idMsg.Msg))
 			bMsg.Reset()
 		case msg := <-srv.outgoing:
-			uiHub.broadcast <- UIMessage{
+			srv.broadcast <- UIMessage{
 				ID:      msg.ID,
 				Type:    "INFO",
 				Message: &msg.Msg,

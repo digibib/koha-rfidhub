@@ -7,6 +7,7 @@ import (
 )
 
 // APPLICATION STATE
+
 var (
 	cfg       *config
 	srv       *TCPServer
@@ -22,9 +23,9 @@ func init() {
 		HTTPPort: "8899",
 	}
 
-	srv = newTCPServer(cfg)
-
 	uiHub = NewHub()
+	srv = newTCPServer(cfg)
+	srv.broadcast = uiHub.broadcast
 }
 
 // APPLICATION ENTRY POINT
