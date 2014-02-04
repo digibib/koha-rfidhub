@@ -116,28 +116,28 @@
 
     $('table').on('click', '.scan-start', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "SCAN", data: "ON"} };
+      var msg = { ID: id, Msg: {cmd: "SCAN-ON"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-ON"} }'+"\n");
     });
 
     $('table').on('click', '.scan-stop', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "SCAN", data: "OFF"} };
+      var msg = { ID: id, Msg: {cmd: "SCAN-OFF"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-OFF"} }'+"\n");
     });
 
         $('table').on('click', '.alarm-on', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "ALARM", data: "ON"} };
+      var msg = { ID: id, Msg: {cmd: "ALARM-ON"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-ON"} }'+"\n");
     });
 
     $('table').on('click', '.alarm-off', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "ALARM", data: "OFF"} };
+      var msg = { ID: id, Msg: {cmd: "ALARM-OFF"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-OFF"} }'+"\n");
     });
