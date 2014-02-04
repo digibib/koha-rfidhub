@@ -51,11 +51,11 @@ func (h *wsHub) run() {
 		select {
 		case c := <-h.uiReg:
 			h.connections[c] = true
-			log.Println("WS  connected")
+			log.Println("WS   connected")
 		case c := <-h.uiUnReg:
 			delete(h.connections, c)
 			close(c.send)
-			log.Println("WS  disconnected")
+			log.Println("WS   disconnected")
 		case msg := <-h.broadcast:
 			log.Printf("-> UI %+v", msg)
 			for c := range h.connections {
