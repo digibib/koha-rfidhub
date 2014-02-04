@@ -28,6 +28,10 @@ func (u *RFIDUnit) run() {
 		select {
 		case msg := <-u.FromRFID:
 			log.Println("<- RFIDUnit:", strings.TrimRight(string(msg), "\n"))
+			srv.outgoing <- encaspulatedUIMessage{
+				ID:  u.conn.RemoteAddr().String(),
+				Msg: msg,
+			}
 		case <-u.Quit:
 			// cleanup
 			log.Println("INFO", "Shutting down RFID-unit statemachine:", u.conn.RemoteAddr().String())

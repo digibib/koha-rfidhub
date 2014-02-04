@@ -95,6 +95,9 @@
             $(document.getElementById('unit-'+data.ID)).remove();
             log(" -- RFID-unit disconnected: "+data.ID);
             break;
+          case "INFO":
+            log(" <- "+resp.data);
+            break;
         }
       };
     };

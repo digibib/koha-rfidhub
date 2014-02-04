@@ -9,7 +9,7 @@ type encaspulatedUIMessage struct {
 
 type UIMessage struct {
 	Type    string // "INFO" "CONNECT" or "DISCONNECT"
-	Message string
+	Message *json.RawMessage
 	ID      string // Ip:port of RFID-unit
 }
 

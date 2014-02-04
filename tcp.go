@@ -9,12 +9,12 @@ import (
 
 // TCPServer listens for and accepts connections from RFID-units
 type TCPServer struct {
-	listenAddr  string               // Host:port to listen at
-	connections map[string]*RFIDUnit // Keyed by the unit's IP address (+port)
-	addChan     chan *RFIDUnit       // Register a RFIDUnit
-	rmChan      chan *RFIDUnit       // Remove a RFIDUnit
-	incoming    chan []byte          // Incoming messages from RFIDUnits from UI
-	outgoing    chan []byte          // Outgoing messages to UI
+	listenAddr  string                     // Host:port to listen at
+	connections map[string]*RFIDUnit       // Keyed by the unit's IP address (+port)
+	addChan     chan *RFIDUnit             // Register a RFIDUnit
+	rmChan      chan *RFIDUnit             // Remove a RFIDUnit
+	incoming    chan []byte                // Incoming messages (going to) RFIDUnits from UI
+	outgoing    chan encaspulatedUIMessage // Outgoing messages to UI
 }
 
 // run listens for and accept incomming connections. It is meant to run in
@@ -45,6 +45,7 @@ func newTCPServer(cfg *config) *TCPServer {
 		addChan:     make(chan *RFIDUnit),
 		rmChan:      make(chan *RFIDUnit),
 		incoming:    make(chan []byte),
+		outgoing:    make(chan encaspulatedUIMessage),
 	}
 }
 
@@ -83,6 +84,12 @@ func (srv TCPServer) handleMessages() {
 			unit.ToRFID <- bMsg.Bytes()
 			log.Println("<-", "UI to", idMsg.ID, string(idMsg.Msg))
 			bMsg.Reset()
+		case msg := <-srv.outgoing:
+			uiHub.broadcast <- UIMessage{
+				ID:      msg.ID,
+				Type:    "INFO",
+				Message: &msg.Msg,
+			}
 		}
 	}
 }
