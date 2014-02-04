@@ -113,38 +113,38 @@
 
     $('table').on('click', '.scan-start', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {Cmd: "SCAN", Data: "ON"} };
+      var msg = { ID: id, Msg: {cmd: "SCAN", data: "ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "SCAN", "Data": "ON"} }'+"\n");
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "SCAN", "data": "ON"} }'+"\n");
     });
 
     $('table').on('click', '.scan-stop', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {Cmd: "SCAN", Data: "OFF"} };
+      var msg = { ID: id, Msg: {cmd: "SCAN", data: "OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "SCAN", "Data": "OFF"} }'+"\n");
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "SCAN", "data": "OFF"} }'+"\n");
     });
 
         $('table').on('click', '.alarm-on', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {Cmd: "ALARM", Data: "ON"} };
+      var msg = { ID: id, Msg: {cmd: "ALARM", data: "ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "ALARM", "Data": "ON"} }'+"\n");
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "ALARM", "data": "ON"} }'+"\n");
     });
 
     $('table').on('click', '.alarm-off', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {Cmd: "ALARM", Data: "OFF"} };
+      var msg = { ID: id, Msg: {cmd: "ALARM", data: "OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "ALARM", "Data": "OFF"} }'+"\n");
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "ALARM", "data": "OFF"} }'+"\n");
     });
 
     $('table').on('click', '.write', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
       var writeString = $(this).parents('tr').find('.bytestring').val();
-      var msg = { ID: id, Msg: {Cmd: "WRITE", Data: writeString} };
+      var msg = { ID: id, Msg: {cmd: "WRITE", data: writeString} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "WRITE", "Data": "' + writeString +'"} }'+"\n");
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "WRITE", "data": "' + writeString +'"} }'+"\n");
     });
 
   });
