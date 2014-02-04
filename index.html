@@ -118,28 +118,28 @@
       var id = $(this).parents('tr').attr('id').substring(5);
       var msg = { ID: id, Msg: {cmd: "SCAN", data: "ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "SCAN", "data": "ON"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-ON"} }'+"\n");
     });
 
     $('table').on('click', '.scan-stop', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
       var msg = { ID: id, Msg: {cmd: "SCAN", data: "OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "SCAN", "data": "OFF"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-OFF"} }'+"\n");
     });
 
         $('table').on('click', '.alarm-on', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
       var msg = { ID: id, Msg: {cmd: "ALARM", data: "ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "ALARM", "data": "ON"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-ON"} }'+"\n");
     });
 
     $('table').on('click', '.alarm-off', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
       var msg = { ID: id, Msg: {cmd: "ALARM", data: "OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "ALARM", "data": "OFF"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-OFF"} }'+"\n");
     });
 
     $('table').on('click', '.write', function() {
@@ -147,7 +147,7 @@
       var writeString = $(this).parents('tr').find('.bytestring').val();
       var msg = { ID: id, Msg: {cmd: "WRITE", data: writeString} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"cmd": "WRITE", "data": "' + writeString +'"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "WRITE", "data": "' + writeString +'"} }'+"\n");
     });
 
   });
