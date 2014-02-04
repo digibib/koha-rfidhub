@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
 	"net"
 )
@@ -42,23 +44,15 @@ func newTCPServer(cfg *config) *TCPServer {
 		listenAddr:  ":" + cfg.TCPPort,
 		addChan:     make(chan *RFIDUnit),
 		rmChan:      make(chan *RFIDUnit),
-	}
-}
-
-func (srv TCPServer) get(addr string) <-chan *RFIDUnit {
-	c := make(chan *RFIDUnit)
-	for {
-		go func() {
-			if a, ok := srv.connections[addr]; ok {
-				c <- a
-				return
-			}
-		}()
-		return c
+		incoming:    make(chan []byte),
 	}
 }
 
 func (srv TCPServer) handleMessages() {
+	var (
+		idMsg encaspulatedUIMessage
+		bMsg  bytes.Buffer
+	)
 	for {
 		select {
 		case unit := <-srv.addChan:
@@ -73,6 +67,22 @@ func (srv TCPServer) handleMessages() {
 				Type: "DISCONNECT",
 				ID:   unit.conn.RemoteAddr().String()}
 			delete(srv.connections, unit.conn.RemoteAddr().String())
+		case msg := <-srv.incoming:
+			err := json.Unmarshal(msg, &idMsg)
+			if err != nil {
+				log.Println("ERR", err)
+				break
+			}
+			unit, ok := srv.connections[idMsg.ID]
+			if !ok {
+				log.Println("ERR", "Cannot transmit message to missing RFIDunit", idMsg.ID)
+				break
+			}
+			bMsg.Write(idMsg.Msg)
+			bMsg.Write([]byte("\n"))
+			unit.ToRFID <- bMsg.Bytes()
+			log.Println("<-", "UI to", idMsg.ID, string(idMsg.Msg))
+			bMsg.Reset()
 		}
 	}
 }

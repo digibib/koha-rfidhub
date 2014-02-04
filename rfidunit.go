@@ -9,7 +9,6 @@ import (
 
 type RFIDUnit struct {
 	conn     net.Conn
-	FromUI   chan []byte
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
@@ -18,7 +17,6 @@ type RFIDUnit struct {
 func newRFIDUnit(c net.Conn) *RFIDUnit {
 	return &RFIDUnit{
 		conn:     c,
-		FromUI:   make(chan []byte),
 		FromRFID: make(chan []byte),
 		ToRFID:   make(chan []byte),
 		Quit:     make(chan bool),
@@ -30,8 +28,6 @@ func (u *RFIDUnit) run() {
 		select {
 		case msg := <-u.FromRFID:
 			log.Println("<- RFIDUnit:", strings.TrimRight(string(msg), "\n"))
-		case msg := <-u.FromUI:
-			log.Println("<- UI:", msg)
 		case <-u.Quit:
 			// cleanup
 			log.Println("INFO", "Shutting down RFID-unit statemachine:", u.conn.RemoteAddr().String())
@@ -63,7 +59,7 @@ func (u *RFIDUnit) tcpWriter() {
 			log.Println("ERR ", err)
 			break
 		}
-		log.Println("-> RFIDUnit:", strings.TrimRight(string(msg), "\n"))
+		log.Println("-> RFIDUnit", u.conn.RemoteAddr().String(), strings.TrimRight(string(msg), "\n"))
 		err = w.Flush()
 		if err != nil {
 			log.Println("ERR ", err)

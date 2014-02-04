@@ -41,7 +41,7 @@
           <button class="alarm-on">Aktivér alarm</button>
           <button class="alarm-off">Deaktivér alarm</button>
           <input class="bytestring" type="text" placeholder="bytestreng"/>
-          <button class="write">Prege brikke</button>
+          <button class="write" disabled="true">Prege brikke</button>
         </td>
       </tr>
       {{range .Units}}
@@ -53,7 +53,7 @@
             <button class="alarm-on">Aktivér alarm</button>
             <button class="alarm-off">Deaktivér alarm</button>
             <input class="bytestring" type="text" placeholder="bytestreng"/>
-            <button class="write">Prege brikke</button>
+            <button class="write" disabled="true">Prege brikke</button>
           </td>
         </tr>
       {{end}}
@@ -103,10 +103,50 @@
       // TODO try to reconnecd SetInterval 1 sec
     };
 
-    $('table').on('click', '.scan-start', function() {
-      var id = $(this).parents('tr').attr('id');
-      log(' -> {"Cmd": "START-SCAN", "ID":"' + id.substring(5)+ '"}');
+    $('table').on('keyup', '.bytestring', function() {
+      if ( $(this).val().trim() !== "" ) {
+        $(this).parents('td').find('.write').attr('disabled', false);
+      } else {
+        $(this).parents('td').find('.write').attr('disabled', true);
+      }
     });
+
+    $('table').on('click', '.scan-start', function() {
+      var id = $(this).parents('tr').attr('id').substring(5);
+      var msg = { ID: id, Msg: {Cmd: "SCAN", Data: "ON"} };
+      ws.send(JSON.stringify(msg));
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "SCAN", "Data": "ON"} }'+"\n");
+    });
+
+    $('table').on('click', '.scan-stop', function() {
+      var id = $(this).parents('tr').attr('id').substring(5);
+      var msg = { ID: id, Msg: {Cmd: "SCAN", Data: "OFF"} };
+      ws.send(JSON.stringify(msg));
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "SCAN", "Data": "OFF"} }'+"\n");
+    });
+
+        $('table').on('click', '.alarm-on', function() {
+      var id = $(this).parents('tr').attr('id').substring(5);
+      var msg = { ID: id, Msg: {Cmd: "ALARM", Data: "ON"} };
+      ws.send(JSON.stringify(msg));
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "ALARM", "Data": "ON"} }'+"\n");
+    });
+
+    $('table').on('click', '.alarm-off', function() {
+      var id = $(this).parents('tr').attr('id').substring(5);
+      var msg = { ID: id, Msg: {Cmd: "ALARM", Data: "OFF"} };
+      ws.send(JSON.stringify(msg));
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "ALARM", "Data": "OFF"} }'+"\n");
+    });
+
+    $('table').on('click', '.write', function() {
+      var id = $(this).parents('tr').attr('id').substring(5);
+      var writeString = $(this).parents('tr').find('.bytestring').val();
+      var msg = { ID: id, Msg: {Cmd: "WRITE", Data: writeString} };
+      ws.send(JSON.stringify(msg));
+      log(' -> { "ID":"' + id.substring(5)+ '", "Msg": {"Cmd": "WRITE", "Data": "' + writeString +'"} }'+"\n");
+    });
+
   });
   </script>
 </body>

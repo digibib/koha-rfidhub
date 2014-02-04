@@ -22,10 +22,11 @@ func (c *uiConn) writer() {
 
 func (c *uiConn) reader() {
 	for {
-		_, _, err := c.ws.ReadMessage()
+		_, msg, err := c.ws.ReadMessage()
 		if err != nil {
 			break
 		}
+		srv.incoming <- msg
 	}
 }
 
