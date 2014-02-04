@@ -8,8 +8,8 @@ build:
 	@go build
 
 profile: build
-	go test -run none -bench . -benchtime 4s -cpuprofile=prof.out
-	go tool pprof ./automathub ./prof.out
+	go test -run none -bench . -cpuprofile=prof.out
+	go tool pprof ./koha-rfidhub ./prof.out
 
 run:
 	@go run main.go handlers.go config.go rfidunit.go tcp.go ws.go protocols.go --race
