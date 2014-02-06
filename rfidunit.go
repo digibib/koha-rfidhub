@@ -30,7 +30,7 @@ func (u *RFIDUnit) run() {
 	for {
 		select {
 		case msg := <-u.FromRFID:
-			log.Println("<- RFIDUnit:", strings.TrimRight(string(msg), "\n"))
+			log.Println("<- RFIDUnit:", strings.TrimSuffix(string(msg), "\n"))
 			u.broadcast <- encaspulatedUIMessage{
 				ID:  u.conn.RemoteAddr().String(),
 				Msg: msg,
@@ -66,7 +66,7 @@ func (u *RFIDUnit) tcpWriter() {
 			log.Println("ERR ", err)
 			break
 		}
-		log.Println("-> RFIDUnit", u.conn.RemoteAddr().String(), strings.TrimRight(string(msg), "\n"))
+		log.Println("-> RFIDUnit", u.conn.RemoteAddr().String(), strings.TrimSuffix(string(msg), "\n"))
 		err = w.Flush()
 		if err != nil {
 			log.Println("ERR ", err)
