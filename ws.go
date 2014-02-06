@@ -38,7 +38,7 @@ type wsHub struct {
 	broadcast chan UIMessage // Broadcast to all connected UIs
 }
 
-func NewHub() *wsHub {
+func newHub() *wsHub {
 	return &wsHub{
 		connections: make(map[*uiConn]bool),
 		uiReg:       make(chan *uiConn),

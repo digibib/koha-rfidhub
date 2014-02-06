@@ -25,7 +25,7 @@ func init() {
 		HTTPPort: "8899",
 	}
 
-	uiHub = NewHub()
+	uiHub = newHub()
 	srv = newTCPServer(cfg)
 	srv.broadcast = uiHub.broadcast
 }

@@ -8,7 +8,7 @@ import (
 
 func connectionsToUnits(conns map[string]*RFIDUnit) []string {
 	var res []string
-	for c, _ := range conns {
+	for c := range conns {
 		res = append(res, c)
 	}
 	return res

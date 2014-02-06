@@ -7,6 +7,18 @@ import (
 	"strings"
 )
 
+/*
+type UnitState uint8
+
+const (
+	UNITIdle UnitState = iota
+	UNITCheckin
+	UNITCheckout
+	UNITWriting
+)
+*/
+
+// RFIDUnit represents a connected RFID-unit (skrankeløsning)
 type RFIDUnit struct {
 	conn     net.Conn
 	FromRFID chan []byte

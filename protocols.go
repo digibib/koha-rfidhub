@@ -7,15 +7,9 @@ type encaspulatedUIMessage struct {
 	Msg json.RawMessage
 }
 
+// UIMessage represents a message from RFIDUnit to the test-webserver
 type UIMessage struct {
 	Type    string // "INFO" "CONNECT" or "DISCONNECT"
 	Message *json.RawMessage
 	ID      string // Ip:port of RFID-unit
-}
-
-type RFIDMessage struct {
-	Cmd    string
-	Data   string
-	Status string
-	ID     string
 }
