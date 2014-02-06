@@ -32,3 +32,4 @@ cover:
 clean:
 	@go clean
 	@rm -f *.out
+	@rm -f koha-rfidhub*
