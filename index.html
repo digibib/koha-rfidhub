@@ -71,7 +71,8 @@
 <body>
   <script>
   function log(line) {
-    var logLine = new Date() + line;
+    var logLine = ""+new Date()
+    logLine = logLine.substring(16,24) + line;
      $('#logg').prepend('<li>'+logLine+'</li>');
   }
 
