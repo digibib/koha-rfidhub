@@ -15,6 +15,7 @@
     li:nth-child(odd) { background: #eee;}
     #content { width: 1000px; margin: auto;}
     #logg { font-family: monospace; list-style-type: none; padding:0; margin:0 ;}
+    .tagid { width: 100px;}
     .active:before { color: green; font-size:30px; content: '• '; vertical-align: middle;}
     .hidden { display: none;}
   </style>
@@ -38,8 +39,9 @@
         <td>
           <button class="scan-start">Start scanning</button>
           <button class="scan-stop">Stop scanning</button>
-          <button class="alarm-on">Aktivér alarm</button>
-          <button class="alarm-off">Deaktivér alarm</button>
+          <button class="alarm-on">Alarm på</button>
+          <button class="alarm-off">Alarm av</button>
+          <input class="tagid" type="text" placeholder="tag-id"/>
           <input class="bytestring" type="text" placeholder="bytestreng"/>
           <button class="write" disabled="true">Prege brikke</button>
         </td>
@@ -50,8 +52,9 @@
           <td>
             <button class="scan-start">Start scanning</button>
             <button class="scan-stop">Stop scanning</button>
-            <button class="alarm-on">Aktivér alarm</button>
-            <button class="alarm-off">Deaktivér alarm</button>
+            <button class="alarm-on">Alarm på</button>
+            <button class="alarm-off">Alarm av</button>
+            <input class="tagid" type="text" placeholder="tag-id"/>
             <input class="bytestring" type="text" placeholder="bytestreng"/>
             <button class="write" disabled="true">Prege brikke</button>
           </td>
@@ -145,10 +148,11 @@
 
     $('table').on('click', '.write', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
+      var tagId = $(this).parents('tr').find('.tagid').val();
       var writeString = $(this).parents('tr').find('.bytestring').val();
-      var msg = { ID: id, Msg: {cmd: "WRITE", data: writeString} };
+      var msg = { ID: id, Msg: {cmd: "WRITE", id: tagId, data: writeString} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "WRITE", "data": "' + writeString +'"} }'+"\n");
+      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "WRITE", "id":' + tagId + ' "data": "' + writeString +'"} }'+"\n");
     });
 
   });
