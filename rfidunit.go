@@ -12,14 +12,17 @@ type RFIDUnit struct {
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
+	// Broadcast all events to this channel
+	broadcast chan encaspulatedUIMessage
 }
 
 func newRFIDUnit(c net.Conn) *RFIDUnit {
 	return &RFIDUnit{
-		conn:     c,
-		FromRFID: make(chan []byte),
-		ToRFID:   make(chan []byte),
-		Quit:     make(chan bool),
+		conn:      c,
+		FromRFID:  make(chan []byte),
+		ToRFID:    make(chan []byte),
+		Quit:      make(chan bool),
+		broadcast: make(chan encaspulatedUIMessage),
 	}
 }
 
@@ -28,7 +31,7 @@ func (u *RFIDUnit) run() {
 		select {
 		case msg := <-u.FromRFID:
 			log.Println("<- RFIDUnit:", strings.TrimRight(string(msg), "\n"))
-			srv.outgoing <- encaspulatedUIMessage{
+			u.broadcast <- encaspulatedUIMessage{
 				ID:  u.conn.RemoteAddr().String(),
 				Msg: msg,
 			}

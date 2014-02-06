@@ -100,6 +100,7 @@ func (srv TCPServer) handleMessages() {
 
 func (srv TCPServer) handleConnection(c net.Conn) {
 	unit := newRFIDUnit(c)
+	unit.broadcast = srv.outgoing
 	defer c.Close()
 
 	srv.addChan <- unit
