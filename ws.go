@@ -54,6 +54,11 @@ func (h *wsHub) run() {
 			h.connections[c] = true
 			log.Println("WS   Connected")
 		case c := <-h.uiUnReg:
+			// TODO I shouldnt have to do this; but got panic because
+			//      "close of closed channel" on some occations.
+			if _, ok := h.connections[c]; !ok {
+				break
+			}
 			delete(h.connections, c)
 			close(c.send)
 			log.Println("WS   Disconnected")
