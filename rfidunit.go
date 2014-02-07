@@ -2,9 +2,10 @@ package main
 
 import (
 	"bufio"
-	"log"
 	"net"
 	"strings"
+
+	"github.com/loggo/loggo"
 )
 
 /*
@@ -17,6 +18,8 @@ const (
 	UNITWriting
 )
 */
+
+var rfidLogger = loggo.GetLogger("rfidunit")
 
 // RFIDUnit represents a connected RFID-unit (skrankeløsning)
 type RFIDUnit struct {
@@ -41,14 +44,14 @@ func (u *RFIDUnit) run() {
 	for {
 		select {
 		case msg := <-u.FromRFID:
-			log.Println("<- RFIDUnit:", strings.TrimSuffix(string(msg), "\n"))
+			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n"))
 			u.broadcast <- encaspulatedUIMessage{
 				ID:  u.conn.RemoteAddr().String(),
 				Msg: msg,
 			}
 		case <-u.Quit:
 			// cleanup
-			log.Println("INFO", "Shutting down RFID-unit statemachine:", u.conn.RemoteAddr().String())
+			rfidLogger.Infof("Shutting down RFID-unit run(): %v", u.conn.RemoteAddr().String())
 			close(u.ToRFID)
 			return
 		}
@@ -74,13 +77,13 @@ func (u *RFIDUnit) tcpWriter() {
 	for msg := range u.ToRFID {
 		_, err := w.Write(msg)
 		if err != nil {
-			log.Println("ERR ", err)
+			rfidLogger.Warningf(err.Error())
 			break
 		}
-		log.Println("-> RFIDUnit", u.conn.RemoteAddr().String(), strings.TrimSuffix(string(msg), "\n"))
+		rfidLogger.Infof("-> RFIDUnit %v %v", u.conn.RemoteAddr().String(), strings.TrimSuffix(string(msg), "\n"))
 		err = w.Flush()
 		if err != nil {
-			log.Println("ERR ", err)
+			rfidLogger.Warningf(err.Error())
 			break
 		}
 	}

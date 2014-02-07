@@ -1,10 +1,11 @@
 package main
 
 import (
-	"log"
-
 	"github.com/gorilla/websocket"
+	"github.com/loggo/loggo"
 )
+
+var wsLogger = loggo.GetLogger("ws")
 
 type uiConn struct {
 	ws   *websocket.Conn
@@ -54,7 +55,7 @@ func (h *wsHub) run() {
 		select {
 		case c := <-h.uiReg:
 			h.connections[c] = true
-			log.Println("WS   Connected")
+			wsLogger.Infof("WS   Connected")
 		case c := <-h.uiUnReg:
 			// TODO I shouldnt have to do this; but got panic because
 			//      "close of closed channel" on some occations.
@@ -63,9 +64,9 @@ func (h *wsHub) run() {
 			}
 			delete(h.connections, c)
 			close(c.send)
-			log.Println("WS   Disconnected")
+			wsLogger.Infof("WS   Disconnected")
 		case msg := <-h.broadcast:
-			log.Printf("-> UI %+v", msg)
+			wsLogger.Infof("-> UI %+v", msg)
 			for c := range h.connections {
 				select {
 				case c.send <- msg:

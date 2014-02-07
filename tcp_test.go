@@ -7,7 +7,12 @@ import (
 	"time"
 
 	"github.com/knakk/specs"
+	"github.com/loggo/loggo"
 )
+
+func init() {
+	loggo.RemoveWriter("default")
+}
 
 func TestTCPServer(t *testing.T) {
 	s := specs.New(t)

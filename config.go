@@ -6,8 +6,9 @@ import (
 )
 
 type config struct {
-	TCPPort  string
-	HTTPPort string
+	TCPPort   string
+	HTTPPort  string
+	LogLevels string
 }
 
 func (c *config) fromFile(file string) error {

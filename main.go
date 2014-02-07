@@ -2,8 +2,9 @@ package main
 
 import (
 	"html/template"
-	"log"
 	"net/http"
+
+	"github.com/loggo/loggo"
 
 	_ "net/http/pprof"
 )
@@ -11,41 +12,41 @@ import (
 // APPLICATION STATE
 
 var (
-	cfg       *config
-	srv       *TCPServer
-	uiHub     *wsHub
-	templates = template.Must(template.ParseFiles("index.html"))
+	cfg        *config
+	srv        *TCPServer
+	uiHub      *wsHub
+	templates  = template.Must(template.ParseFiles("index.html"))
+	logger     = loggo.GetLogger("main")
+	rootLogger = loggo.GetLogger("")
 )
 
-// SETUP
+// SETUP &APPLICATION ENTRY POINT
 
-func init() {
+func main() {
 	err := cfg.fromFile("config.json")
 	if err != nil {
 		cfg = &config{
-			TCPPort:  "6767",
-			HTTPPort: "8899",
+			TCPPort:   "6767",
+			HTTPPort:  "8899",
+			LogLevels: "<root>=WARNING;tcp=INFO;ws=INFO;main=INFO;sip=WARNING;rfidunit=DEBUG;web=WARNING",
 		}
-		log.Printf("INFO No config file found, using standard values")
+		logger.Warningf("No config.json file found, using standard values")
 	}
+	loggo.ConfigureLoggers(cfg.LogLevels)
 
 	uiHub = newHub()
 	srv = newTCPServer(cfg)
 	srv.broadcast = uiHub.broadcast
-}
 
-// APPLICATION ENTRY POINT
-
-func main() {
-	log.Println("INFO", "Starting TCP server, listening at port", cfg.TCPPort)
+	logger.Infof("Starting TCP server, listening at port %v", cfg.TCPPort)
 	go srv.run()
 
-	log.Println("INFO", "Starting Websocket hub")
+	logger.Infof("Starting Websocket hub")
 	go uiHub.run()
 
 	http.HandleFunc("/", testHandler)
 	http.HandleFunc("/ws", wsHandler)
 
-	log.Println("INFO", "Starting HTTP server, listening at port", cfg.HTTPPort)
-	log.Fatal(http.ListenAndServe(":"+cfg.HTTPPort, nil))
+	logger.Infof("Starting HTTP server, listening at port %v", cfg.HTTPPort)
+	http.ListenAndServe(":"+cfg.HTTPPort, nil)
 }

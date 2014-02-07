@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net"
+
+	"github.com/loggo/loggo"
 )
+
+var tcpLogger = loggo.GetLogger("tcp")
 
 // TCPServer listens for and accepts connections from RFID-units
 type TCPServer struct {
@@ -25,7 +28,8 @@ type TCPServer struct {
 func (srv TCPServer) run() {
 	ln, err := net.Listen("tcp", srv.listenAddr)
 	if err != nil {
-		log.Fatal("ERR ", err)
+		tcpLogger.Errorf(err.Error())
+		panic("Can't start TCP-server. Exiting.")
 	}
 	defer ln.Close()
 
@@ -34,7 +38,7 @@ func (srv TCPServer) run() {
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			log.Println("ERR ", err)
+			tcpLogger.Warningf(err.Error())
 			continue
 		}
 		go srv.handleConnection(conn)
@@ -61,13 +65,13 @@ func (srv TCPServer) handleMessages() {
 	for {
 		select {
 		case unit := <-srv.addChan:
-			log.Printf("TCP [%v] RFID-unit connected\n", unit.conn.RemoteAddr())
+			tcpLogger.Infof("TCP [%v] RFID-unit connected\n", unit.conn.RemoteAddr())
 			srv.connections[unit.conn.RemoteAddr().String()] = unit
 			srv.broadcast <- UIMessage{
 				Type: "CONNECT",
 				ID:   unit.conn.RemoteAddr().String()}
 		case unit := <-srv.rmChan:
-			log.Printf("TCP [%v] RFID-unit disconnected\n", unit.conn.RemoteAddr())
+			tcpLogger.Infof("TCP [%v] RFID-unit disconnected\n", unit.conn.RemoteAddr())
 			srv.broadcast <- UIMessage{
 				Type: "DISCONNECT",
 				ID:   unit.conn.RemoteAddr().String()}
@@ -75,18 +79,18 @@ func (srv TCPServer) handleMessages() {
 		case msg := <-srv.incoming:
 			err := json.Unmarshal(msg, &idMsg)
 			if err != nil {
-				log.Println("ERR", err)
+				tcpLogger.Warningf(err.Error())
 				break
 			}
 			unit, ok := srv.connections[idMsg.ID]
 			if !ok {
-				log.Println("ERR", "Cannot transmit message to missing RFIDunit", idMsg.ID)
+				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit", idMsg.ID)
 				break
 			}
 			bMsg.Write(idMsg.Msg)
 			bMsg.Write([]byte("\n"))
 			unit.ToRFID <- bMsg.Bytes()
-			log.Println("<-", "UI to", idMsg.ID, string(idMsg.Msg))
+			tcpLogger.Infof("<- UI to %v %v", idMsg.ID, string(idMsg.Msg))
 			bMsg.Reset()
 		case msg := <-srv.outgoing:
 			srv.broadcast <- UIMessage{
