@@ -20,9 +20,13 @@ var (
 // SETUP
 
 func init() {
-	cfg = &config{
-		TCPPort:  "6767",
-		HTTPPort: "8899",
+	err := cfg.fromFile("config.json")
+	if err != nil {
+		cfg = &config{
+			TCPPort:  "6767",
+			HTTPPort: "8899",
+		}
+		log.Printf("INFO No config file found, using standard values")
 	}
 
 	uiHub = newHub()
@@ -33,7 +37,7 @@ func init() {
 // APPLICATION ENTRY POINT
 
 func main() {
-	log.Println("INFO", "Starting TCP server")
+	log.Println("INFO", "Starting TCP server, listening at port", cfg.TCPPort)
 	go srv.run()
 
 	log.Println("INFO", "Starting Websocket hub")
@@ -42,6 +46,6 @@ func main() {
 	http.HandleFunc("/", testHandler)
 	http.HandleFunc("/ws", wsHandler)
 
-	log.Println("INFO", "Starting HTTP server")
+	log.Println("INFO", "Starting HTTP server, listening at port", cfg.HTTPPort)
 	log.Fatal(http.ListenAndServe(":"+cfg.HTTPPort, nil))
 }
