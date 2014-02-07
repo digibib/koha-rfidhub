@@ -13,6 +13,8 @@ type uiConn struct {
 
 func (c *uiConn) writer() {
 	for message := range c.send {
+		// TODO could filter to recipients here, but not good architecture
+		// log.Println("DEBUG Same IP:", sameIP(addr2IP(c.ws.RemoteAddr().String()), addr2IP(message.ID)))
 		err := c.ws.WriteJSON(message)
 		if err != nil {
 			break
