@@ -30,11 +30,10 @@ type RFIDUnit struct {
 
 func newRFIDUnit(c net.Conn) *RFIDUnit {
 	return &RFIDUnit{
-		conn:      c,
-		FromRFID:  make(chan []byte),
-		ToRFID:    make(chan []byte),
-		Quit:      make(chan bool),
-		broadcast: make(chan encaspulatedUIMessage),
+		conn:     c,
+		FromRFID: make(chan []byte),
+		ToRFID:   make(chan []byte),
+		Quit:     make(chan bool),
 	}
 }
 
