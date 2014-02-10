@@ -30,6 +30,7 @@ func main() {
 		cfg = &config{
 			TCPPort:   "6767",
 			HTTPPort:  "8899",
+			SIPServer: "wombat:6001",
 			LogLevels: "<root>=WARNING;tcp=INFO;ws=INFO;main=INFO;sip=WARNING;rfidunit=DEBUG;web=WARNING",
 		}
 		logger.Warningf("No config.json file found, using standard values")

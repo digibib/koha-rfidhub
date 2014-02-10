@@ -10,6 +10,7 @@ type config struct {
 	HTTPPort     string
 	LogLevels    string
 	ErrorLogFile string
+	SIPServer    string
 }
 
 func (c *config) fromFile(file string) error {
