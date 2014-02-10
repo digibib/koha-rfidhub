@@ -3,6 +3,7 @@ package main
 import (
 	"html/template"
 	"net/http"
+	"os"
 
 	"github.com/loggo/loggo"
 
@@ -34,6 +35,14 @@ func main() {
 		logger.Warningf("No config.json file found, using standard values")
 	}
 	loggo.ConfigureLoggers(cfg.LogLevels)
+	file, err := os.Create("errors.log")
+	if err == nil {
+		err = loggo.RegisterWriter("file",
+			loggo.NewSimpleWriter(file, &loggo.DefaultFormatter{}), loggo.WARNING)
+		if err != nil {
+			logger.Warningf(err.Error())
+		}
+	}
 
 	uiHub = newHub()
 	srv = newTCPServer(cfg)
