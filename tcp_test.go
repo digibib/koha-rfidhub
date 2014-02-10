@@ -35,7 +35,7 @@ func TestTCPServer(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 100)
 
-	srv.incoming <- []byte(`{ "ID":"` + c.LocalAddr().String() + `", "Msg": {"cmd":"HI-FROM-SERVER!"} }`)
+	srv.incoming <- []byte(`{ "ID":"` + addr2IP(c.LocalAddr().String()) + `", "Msg": {"cmd":"HI-FROM-SERVER!"} }`)
 	r := bufio.NewReader(c)
 	msg, err := r.ReadString('\n')
 	s.ExpectNil(err)

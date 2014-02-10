@@ -13,7 +13,7 @@ var tcpLogger = loggo.GetLogger("tcp")
 // TCPServer listens for and accepts connections from RFID-units
 type TCPServer struct {
 	listenAddr  string                     // Host:port to listen at
-	connections map[string]*RFIDUnit       // Keyed by the unit's IP address (+port)
+	connections map[string]*RFIDUnit       // Keyed by the unit's IP address
 	addChan     chan *RFIDUnit             // Register a RFIDUnit
 	rmChan      chan *RFIDUnit             // Remove a RFIDUnit
 	incoming    chan []byte                // Incoming messages (going to) RFIDUnits from UI
@@ -65,17 +65,23 @@ func (srv TCPServer) handleMessages() {
 	for {
 		select {
 		case unit := <-srv.addChan:
-			tcpLogger.Infof("TCP [%v] RFID-unit connected\n", unit.conn.RemoteAddr())
-			srv.connections[unit.conn.RemoteAddr().String()] = unit
+			tcpLogger.Infof("RFID-unit connected %v", unit.conn.RemoteAddr())
+			var ip = addr2IP(unit.conn.RemoteAddr().String())
+			if oldunit, ok := srv.connections[ip]; ok {
+				tcpLogger.Warningf("Allready connected RFID-unit from same IP-address; overriding.")
+				oldunit.conn.Close()
+			}
+			srv.connections[ip] = unit
 			srv.broadcast <- UIMessage{
 				Type: "CONNECT",
-				ID:   unit.conn.RemoteAddr().String()}
+				ID:   ip}
 		case unit := <-srv.rmChan:
-			tcpLogger.Infof("TCP [%v] RFID-unit disconnected\n", unit.conn.RemoteAddr())
+			tcpLogger.Infof("RFID-unit disconnected %v", unit.conn.RemoteAddr())
+			var ip = addr2IP(unit.conn.RemoteAddr().String())
 			srv.broadcast <- UIMessage{
 				Type: "DISCONNECT",
-				ID:   unit.conn.RemoteAddr().String()}
-			delete(srv.connections, unit.conn.RemoteAddr().String())
+				ID:   ip}
+			delete(srv.connections, ip)
 		case msg := <-srv.incoming:
 			err := json.Unmarshal(msg, &idMsg)
 			if err != nil {
@@ -84,9 +90,10 @@ func (srv TCPServer) handleMessages() {
 			}
 			unit, ok := srv.connections[idMsg.ID]
 			if !ok {
-				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit", idMsg.ID)
+				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", idMsg.ID)
 				break
 			}
+			// TODO message handling logic, SIP switch etc
 			bMsg.Write(idMsg.Msg)
 			bMsg.Write([]byte("\n"))
 			unit.ToRFID <- bMsg.Bytes()
