@@ -20,9 +20,10 @@ var (
 	rootLogger = loggo.GetLogger("")
 )
 
-// SETUP &APPLICATION ENTRY POINT
+// APPLICATION ENTRY POINT
 
 func main() {
+	// SETUP
 	err := cfg.fromFile("config.json")
 	if err != nil {
 		cfg = &config{
@@ -37,6 +38,8 @@ func main() {
 	uiHub = newHub()
 	srv = newTCPServer(cfg)
 	srv.broadcast = uiHub.broadcast
+
+	// START SERVICES
 
 	logger.Infof("Starting TCP server, listening at port %v", cfg.TCPPort)
 	go srv.run()

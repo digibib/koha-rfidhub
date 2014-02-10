@@ -37,7 +37,12 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := &uiConn{send: make(chan UIMessage), ws: ws}
+	v := r.URL.Query()
+	c := &uiConn{
+		send:     make(chan UIMessage),
+		ws:       ws,
+		ipFilter: v.Get("ip")}
+
 	uiHub.uiReg <- c
 	defer func() {
 		uiHub.uiUnReg <- c

@@ -10,12 +10,13 @@ var wsLogger = loggo.GetLogger("ws")
 type uiConn struct {
 	ws   *websocket.Conn
 	send chan UIMessage
+	// If ipFilter is an empty string, it means the subscriber wants all messages,
+	// otherwise filter by IP:
+	ipFilter string
 }
 
 func (c *uiConn) writer() {
 	for message := range c.send {
-		// TODO could filter to recipients here, but not good architecture
-		// log.Println("DEBUG Same IP:", sameIP(addr2IP(c.ws.RemoteAddr().String()), addr2IP(message.ID)))
 		err := c.ws.WriteJSON(message)
 		if err != nil {
 			break
@@ -68,11 +69,13 @@ func (h *wsHub) run() {
 		case msg := <-h.broadcast:
 			wsLogger.Infof("-> UI %+v", msg)
 			for c := range h.connections {
-				select {
-				case c.send <- msg:
-				default:
-					close(c.send)
-					delete(h.connections, c)
+				if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.ID)) {
+					select {
+					case c.send <- msg:
+					default:
+						close(c.send)
+						delete(h.connections, c)
+					}
 				}
 			}
 		}
