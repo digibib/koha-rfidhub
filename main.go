@@ -15,7 +15,7 @@ var (
 	cfg        *config
 	srv        *TCPServer
 	uiHub      *wsHub
-	templates  = template.Must(template.ParseFiles("index.html"))
+	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
 	logger     = loggo.GetLogger("main")
 	rootLogger = loggo.GetLogger("")
 )
@@ -48,6 +48,7 @@ func main() {
 	go uiHub.run()
 
 	http.HandleFunc("/", testHandler)
+	http.HandleFunc("/ui", uiHandler)
 	http.HandleFunc("/ws", wsHandler)
 
 	logger.Infof("Starting HTTP server, listening at port %v", cfg.HTTPPort)
