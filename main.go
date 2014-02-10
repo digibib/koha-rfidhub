@@ -12,7 +12,7 @@ import (
 // APPLICATION STATE
 
 var (
-	cfg        *config
+	cfg        = &config{}
 	srv        *TCPServer
 	uiHub      *wsHub
 	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
