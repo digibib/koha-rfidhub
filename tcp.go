@@ -68,7 +68,7 @@ func (srv TCPServer) handleMessages() {
 			tcpLogger.Infof("RFID-unit connected %v", unit.conn.RemoteAddr())
 			var ip = addr2IP(unit.conn.RemoteAddr().String())
 			if oldunit, ok := srv.connections[ip]; ok {
-				tcpLogger.Warningf("Allready connected RFID-unit from same IP-address; overriding.")
+				tcpLogger.Warningf("Allready connected RFID-unit from same IP-address; disconnecting and overriding.")
 				oldunit.conn.Close()
 			}
 			srv.connections[ip] = unit
