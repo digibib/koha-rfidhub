@@ -33,3 +33,4 @@ clean:
 	@go clean
 	@rm -f *.out
 	@rm -f koha-rfidhub*
+	@rf -f *.log
