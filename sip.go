@@ -60,12 +60,12 @@ func pairFieldIDandValue(msg string) map[string]string {
 
 // A parserFunc parses a SIP response. It extracts the desired information and
 // returns the JSON message to be sent to the user interface.
-type parserFunc func(string) *UIResponse
+type parserFunc func(string) *MsgToUI
 
 // DoSIPCall performs a SIP request with an automat's SIP TCP-connection. It
 // takes a SIP message as a string and a parser function to transform the SIP
-// response into a UIResponse.
-func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*UIResponse, error) {
+// response into a MsgToUI.
+func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*MsgToUI, error) {
 	// 0. Get connection from pool
 	c := p.Get()
 	defer p.Release(c)
@@ -92,7 +92,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*UIResponse, error) 
 	return res, nil
 }
 
-func authParse(s string) *UIResponse {
+func authParse(s string) *MsgToUI {
 	b := s[61:] // first part of SIPresponse not needed here
 	fields := pairFieldIDandValue(b)
 
@@ -100,10 +100,10 @@ func authParse(s string) *UIResponse {
 	if fields["CQ"] == "Y" {
 		auth = true
 	}
-	return &UIResponse{Action: "LOGIN", Authenticated: auth, Patron: fields["AA"]}
+	return &MsgToUI{Action: "LOGIN", Authenticated: auth, Patron: fields["AA"]}
 }
 
-func checkinParse(s string) *UIResponse {
+func checkinParse(s string) *MsgToUI {
 	a, b := s[:24], s[24:]
 	var (
 		ok     bool
@@ -118,10 +118,10 @@ func checkinParse(s string) *UIResponse {
 	} else {
 		status = fmt.Sprintf("registrert innlevert %s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
-	return &UIResponse{Item: item{OK: ok, Title: fields["AJ"], Status: status}}
+	return &MsgToUI{Item: item{OK: ok, Title: fields["AJ"], Status: status}}
 }
 
-func checkoutParse(s string) *UIResponse {
+func checkoutParse(s string) *MsgToUI {
 	a, b := s[:24], s[24:]
 	var (
 		ok     bool
@@ -139,5 +139,5 @@ func checkoutParse(s string) *UIResponse {
 			status = fields["AF"]
 		}
 	}
-	return &UIResponse{Item: item{OK: ok, Status: status, Title: fields["AJ"]}}
+	return &MsgToUI{Item: item{OK: ok, Status: status, Title: fields["AJ"]}}
 }

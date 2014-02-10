@@ -12,15 +12,14 @@ var tcpLogger = loggo.GetLogger("tcp")
 
 // TCPServer listens for and accepts connections from RFID-units
 type TCPServer struct {
-	listenAddr  string                     // Host:port to listen at
-	connections map[string]*RFIDUnit       // Keyed by the unit's IP address
-	addChan     chan *RFIDUnit             // Register a RFIDUnit
-	rmChan      chan *RFIDUnit             // Remove a RFIDUnit
-	incoming    chan []byte                // Incoming messages (going to) RFIDUnits from UI
-	outgoing    chan encaspulatedUIMessage // Outgoing messages to UI
+	listenAddr  string               // Host:port to listen at
+	connections map[string]*RFIDUnit // Keyed by the unit's IP address
+	addChan     chan *RFIDUnit       // Register a RFIDUnit
+	rmChan      chan *RFIDUnit       // Remove a RFIDUnit
+	incoming    chan []byte          // Incoming messages (going to) RFIDUnits from UI
 
 	// Channel to broadcast to (normally handled by websocket hub)
-	broadcast chan UIMessage
+	broadcast chan MsgToUI
 }
 
 // run listens for and accept incomming connections. It is meant to run in
@@ -52,14 +51,13 @@ func newTCPServer(cfg *config) *TCPServer {
 		addChan:     make(chan *RFIDUnit),
 		rmChan:      make(chan *RFIDUnit),
 		incoming:    make(chan []byte),
-		outgoing:    make(chan encaspulatedUIMessage),
-		broadcast:   make(chan UIMessage),
+		broadcast:   make(chan MsgToUI),
 	}
 }
 
 func (srv TCPServer) handleMessages() {
 	var (
-		idMsg encaspulatedUIMessage
+		uiReq MsgFromUI
 		bMsg  bytes.Buffer
 	)
 	for {
@@ -72,41 +70,37 @@ func (srv TCPServer) handleMessages() {
 				oldunit.conn.Close()
 			}
 			srv.connections[ip] = unit
-			srv.broadcast <- UIMessage{
-				Type: "CONNECT",
-				ID:   ip}
+			srv.broadcast <- MsgToUI{
+				Action: "CONNECT",
+				IP:     ip}
 		case unit := <-srv.rmChan:
 			tcpLogger.Infof("RFID-unit disconnected %v", unit.conn.RemoteAddr())
 			var ip = addr2IP(unit.conn.RemoteAddr().String())
-			srv.broadcast <- UIMessage{
-				Type: "DISCONNECT",
-				ID:   ip}
+			srv.broadcast <- MsgToUI{
+				Action: "DISCONNECT",
+				IP:     ip}
 			delete(srv.connections, ip)
 		case msg := <-srv.incoming:
-			err := json.Unmarshal(msg, &idMsg)
+			err := json.Unmarshal(msg, &uiReq)
 			if err != nil {
 				tcpLogger.Warningf(err.Error())
 				break
 			}
-			unit, ok := srv.connections[idMsg.ID]
+			unit, ok := srv.connections[uiReq.IP]
 			if !ok {
-				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", idMsg.ID)
+				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", uiReq.IP)
 				break
 			}
-			if !idMsg.PassUnparsed {
-				// TODO message handling logic, SIP switch etc
-				break
-			}
-			bMsg.Write(idMsg.Msg)
-			bMsg.Write([]byte("\n"))
-			unit.ToRFID <- bMsg.Bytes()
-			tcpLogger.Infof("<- UI to %v %v", idMsg.ID, string(idMsg.Msg))
-			bMsg.Reset()
-		case msg := <-srv.outgoing:
-			srv.broadcast <- UIMessage{
-				ID:      msg.ID,
-				Type:    "INFO",
-				Message: &msg.Msg,
+
+			switch uiReq.Action {
+			case "RAW":
+				// Pass message unparsed to RFID unit (from test webpage)
+				// TODO remove when done testing
+				bMsg.Write(*uiReq.RawMsg)
+				bMsg.Write([]byte("\n"))
+				unit.ToRFID <- bMsg.Bytes()
+				tcpLogger.Infof("<- UI raw msg to %v %v", uiReq.IP, string(*uiReq.RawMsg))
+				bMsg.Reset()
 			}
 		}
 	}
@@ -114,7 +108,7 @@ func (srv TCPServer) handleMessages() {
 
 func (srv TCPServer) handleConnection(c net.Conn) {
 	unit := newRFIDUnit(c)
-	unit.broadcast = srv.outgoing
+	unit.broadcast = srv.broadcast
 	defer c.Close()
 
 	srv.addChan <- unit

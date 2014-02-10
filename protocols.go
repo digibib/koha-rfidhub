@@ -2,24 +2,20 @@ package main
 
 import "encoding/json"
 
-type encaspulatedUIMessage struct {
-	ID           string
-	PassUnparsed bool // if true; just send directly to rfidunit, otherwise parse json and dispatch to sip
-	Msg          json.RawMessage
+type MsgFromUI struct {
+	IP       string
+	RawMsg   *json.RawMessage
+	Action   string
+	Username string
+	PIN      string
 }
 
-// UIMessage represents a message from RFIDUnit to the test-webserver
-type UIMessage struct {
-	Type    string // "INFO" "CONNECT" or "DISCONNECT"
-	Message *json.RawMessage
-	ID      string // Ip of RFID-unit
-}
-
-// response from the state machine to UI
-type UIResponse struct {
+type MsgToUI struct {
+	IP            string
 	Action        string
 	Status        string
 	Patron        string
+	RawMsg        *json.RawMessage
 	Authenticated bool
 	Message       string
 	ErrorDetails  string

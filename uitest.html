@@ -71,6 +71,9 @@
 <body>
   <script>
   var rfidunit = {{.IP}};
+  var borrowerID = "";
+  var borrowerPIN = "";
+
   function log(line) {
     var logLine = ""+new Date()
     logLine = logLine.substring(16,24) + line;
@@ -85,16 +88,11 @@
       ws.onmessage = function(resp) {
         var data = JSON.parse(resp.data);
         console.log(data);
-        switch (data.Type) {
+        switch (data.Action) {
           case "CONNECT":
-            var $tr = $('tr.hidden').clone().removeClass('hidden');
-            $tr.attr('id', 'unit-'+data.ID);
-            $tr.find('.active').html(data.ID);
-            $('tbody').append($tr);
             log(" -- RFID-unit connected: "+data.ID);
             break;
           case "DISCONNECT":
-            $(document.getElementById('unit-'+data.ID)).remove();
             log(" -- RFID-unit disconnected: "+data.ID);
             break;
           case "INFO":
@@ -111,7 +109,8 @@
     $('#authenticate').on('click', function() {
       var user = $('#input-borrower').val();
       var pin = $('#input-pin').val();
-      var msg = { ID: rfidunit, Msg: { Cmd: "AUTHENTICATE", Username: user, Password: pin } };
+      var msg = { ID: rfidunit, Action: "AUTHENTICATE", Username: user, PIN: pin };
+      log(" -> "+JSON.stringify(msg));
       console.log(msg);
       ws.send(JSON.stringify(msg));
     });

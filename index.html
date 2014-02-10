@@ -87,17 +87,17 @@
       ws.onmessage = function(resp) {
         var data = JSON.parse(resp.data);
         console.log(data);
-        switch (data.Type) {
+        switch (data.Action) {
           case "CONNECT":
             var $tr = $('tr.hidden').clone().removeClass('hidden');
-            $tr.attr('id', 'unit-'+data.ID);
-            $tr.find('.active').html(data.ID);
+            $tr.attr('id', 'unit-'+data.IP);
+            $tr.find('.active').html(data.IP);
             $('tbody').append($tr);
-            log(" -- RFID-unit connected: "+data.ID);
+            log(" -- RFID-unit connected: "+data.IP);
             break;
           case "DISCONNECT":
-            $(document.getElementById('unit-'+data.ID)).remove();
-            log(" -- RFID-unit disconnected: "+data.ID);
+            $(document.getElementById('unit-'+data.IP)).remove();
+            log(" -- RFID-unit disconnected: "+data.IP);
             break;
           case "INFO":
             log(" <- "+resp.data);
@@ -120,39 +120,39 @@
 
     $('table').on('click', '.scan-start', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "SCAN-ON"} };
+      var msg = { IP: id, Action: "RAW", RawMsg: {cmd: "SCAN-ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-ON"} }'+"\n");
+      log(' -> { "IP":"' + id + '", "RawMsg": {"cmd": "SCAN-ON"} }'+"\n");
     });
 
     $('table').on('click', '.scan-stop', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "SCAN-OFF"} };
+      var msg = { IP: id, Action: "RAW", RawMsg: {cmd: "SCAN-OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-OFF"} }'+"\n");
+      log(' -> { "IP":"' + id + '", "RawMsg": {"cmd": "SCAN-OFF"} }'+"\n");
     });
 
         $('table').on('click', '.alarm-on', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "ALARM-ON"} };
+      var msg = { IP: id, Action: "RAW", RawMsg: {cmd: "ALARM-ON"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-ON"} }'+"\n");
+      log(' -> { "IP":"' + id + '", "RawMsg": {"cmd": "ALARM-ON"} }'+"\n");
     });
 
     $('table').on('click', '.alarm-off', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "ALARM-OFF"} };
+      var msg = { IP: id, Action: "RAW", RawMsg: {cmd: "ALARM-OFF"} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-OFF"} }'+"\n");
+      log(' -> { "IP":"' + id + '", "RawMsg": {"cmd": "ALARM-OFF"} }'+"\n");
     });
 
     $('table').on('click', '.write', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
       var tagId = $(this).parents('tr').find('.tagid').val();
       var writeString = $(this).parents('tr').find('.bytestring').val();
-      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "WRITE", id: tagId, data: writeString} };
+      var msg = { IP: id, Action: "RAW", RawMsg: {cmd: "WRITE", iP: tagId, data: writeString} };
       ws.send(JSON.stringify(msg));
-      log(' -> { "ID":"' + id + '", "Msg": {"cmd": "WRITE", "id":' + tagId + ' "data": "' + writeString +'"} }'+"\n");
+      log(' -> { "IP":"' + id + '", "RawMsg": {"cmd": "WRITE", "id":' + tagId + ' "data": "' + writeString +'"} }'+"\n");
     });
 
   });

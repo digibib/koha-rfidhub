@@ -53,7 +53,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := r.URL.Query()
 	c := &uiConn{
-		send:     make(chan UIMessage),
+		send:     make(chan MsgToUI),
 		ws:       ws,
 		ipFilter: v.Get("ip")}
 

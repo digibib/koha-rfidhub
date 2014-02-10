@@ -9,7 +9,7 @@ var wsLogger = loggo.GetLogger("ws")
 
 type uiConn struct {
 	ws   *websocket.Conn
-	send chan UIMessage
+	send chan MsgToUI
 	// If ipFilter is an empty string, it means the subscriber wants all messages,
 	// otherwise filter by IP:
 	ipFilter string
@@ -39,7 +39,7 @@ type wsHub struct {
 	uiReg       chan *uiConn // Register connection
 	uiUnReg     chan *uiConn // Unregister connection
 
-	broadcast chan UIMessage // Broadcast to all connected UIs
+	broadcast chan MsgToUI // Broadcast to all connected UIs
 }
 
 func newHub() *wsHub {
@@ -47,7 +47,7 @@ func newHub() *wsHub {
 		connections: make(map[*uiConn]bool),
 		uiReg:       make(chan *uiConn),
 		uiUnReg:     make(chan *uiConn),
-		broadcast:   make(chan UIMessage),
+		broadcast:   make(chan MsgToUI),
 	}
 }
 
@@ -69,7 +69,7 @@ func (h *wsHub) run() {
 		case msg := <-h.broadcast:
 			wsLogger.Infof("-> UI %+v", msg)
 			for c := range h.connections {
-				if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.ID)) {
+				if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.IP)) {
 					select {
 					case c.send <- msg:
 					default:

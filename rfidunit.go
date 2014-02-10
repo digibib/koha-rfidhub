@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"net"
 	"strings"
 
@@ -28,7 +29,7 @@ type RFIDUnit struct {
 	ToRFID   chan []byte
 	Quit     chan bool
 	// Broadcast all events to this channel
-	broadcast chan encaspulatedUIMessage
+	broadcast chan MsgToUI
 }
 
 func newRFIDUnit(c net.Conn) *RFIDUnit {
@@ -45,13 +46,15 @@ func (u *RFIDUnit) run() {
 		select {
 		case msg := <-u.FromRFID:
 			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n"))
-			u.broadcast <- encaspulatedUIMessage{
-				ID:  u.conn.RemoteAddr().String(),
-				Msg: msg,
+			var raw = json.RawMessage(msg)
+			u.broadcast <- MsgToUI{
+				IP:     addr2IP(u.conn.RemoteAddr().String()),
+				RawMsg: &raw,
+				Action: "INFO",
 			}
 		case <-u.Quit:
 			// cleanup
-			rfidLogger.Infof("Shutting down RFID-unit run(): %v", u.conn.RemoteAddr().String())
+			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(u.conn.RemoteAddr().String()))
 			close(u.ToRFID)
 			return
 		}
