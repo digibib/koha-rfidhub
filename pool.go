@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"strings"
 )
@@ -33,15 +32,15 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 	out := fmt.Sprintf(sipMsg93, i.(int), i.(int))
 	_, err = conn.Write([]byte(out))
 	if err != nil {
-		log.Println("ERROR", err)
+		sipLogger.Errorf(err.Error())
 		return nil, err
 	}
-	log.Println("-> SIP", strings.Trim(out, "\n\r"))
+	sipLogger.Infof("-> %v", strings.Trim(out, "\n\r"))
 
 	reader := bufio.NewReader(conn)
 	in, err := reader.ReadString('\r')
 	if err != nil {
-		log.Println("ERROR", err)
+		sipLogger.Errorf(err.Error())
 		return nil, err
 	}
 
@@ -50,7 +49,7 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 		return nil, errors.New("SIP login failed")
 	}
 
-	log.Println("<- SIP", strings.Trim(in, "\n\r"))
+	sipLogger.Infof("<- %v", strings.Trim(in, "\n\r"))
 	return conn, nil
 
 }

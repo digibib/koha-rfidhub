@@ -6,11 +6,12 @@ import (
 )
 
 type config struct {
-	TCPPort      string
-	HTTPPort     string
-	LogLevels    string
-	ErrorLogFile string
-	SIPServer    string
+	TCPPort           string
+	HTTPPort          string
+	LogLevels         string
+	ErrorLogFile      string
+	SIPServer         string
+	NumSIPConnections int
 }
 
 func (c *config) fromFile(file string) error {

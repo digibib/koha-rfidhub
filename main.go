@@ -15,6 +15,7 @@ import (
 var (
 	cfg        = &config{}
 	srv        *TCPServer
+	sipPool    *ConnPool
 	uiHub      *wsHub
 	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
 	logger     = loggo.GetLogger("main")
@@ -28,10 +29,11 @@ func main() {
 	err := cfg.fromFile("config.json")
 	if err != nil {
 		cfg = &config{
-			TCPPort:   "6767",
-			HTTPPort:  "8899",
-			SIPServer: "wombat:6001",
-			LogLevels: "<root>=WARNING;tcp=INFO;ws=INFO;main=INFO;sip=WARNING;rfidunit=DEBUG;web=WARNING",
+			TCPPort:           "6767",
+			HTTPPort:          "8899",
+			SIPServer:         "wombat:6001",
+			NumSIPConnections: 5,
+			LogLevels:         "<root>=WARNING;tcp=INFO;ws=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
 		logger.Warningf("No config.json file found, using standard values")
 	}
@@ -50,6 +52,9 @@ func main() {
 	srv.broadcast = uiHub.broadcast
 
 	// START SERVICES
+
+	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
+	sipPool = NewSIPConnPool(cfg.NumSIPConnections)
 
 	logger.Infof("Starting TCP server, listening at port %v", cfg.TCPPort)
 	go srv.run()
