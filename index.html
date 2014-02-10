@@ -120,28 +120,28 @@
 
     $('table').on('click', '.scan-start', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "SCAN-ON"} };
+      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "SCAN-ON"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-ON"} }'+"\n");
     });
 
     $('table').on('click', '.scan-stop', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "SCAN-OFF"} };
+      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "SCAN-OFF"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "SCAN-OFF"} }'+"\n");
     });
 
         $('table').on('click', '.alarm-on', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "ALARM-ON"} };
+      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "ALARM-ON"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-ON"} }'+"\n");
     });
 
     $('table').on('click', '.alarm-off', function() {
       var id = $(this).parents('tr').attr('id').substring(5);
-      var msg = { ID: id, Msg: {cmd: "ALARM-OFF"} };
+      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "ALARM-OFF"} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "ALARM-OFF"} }'+"\n");
     });
@@ -150,7 +150,7 @@
       var id = $(this).parents('tr').attr('id').substring(5);
       var tagId = $(this).parents('tr').find('.tagid').val();
       var writeString = $(this).parents('tr').find('.bytestring').val();
-      var msg = { ID: id, Msg: {cmd: "WRITE", id: tagId, data: writeString} };
+      var msg = { ID: id, PassUnparsed: true, Msg: {cmd: "WRITE", id: tagId, data: writeString} };
       ws.send(JSON.stringify(msg));
       log(' -> { "ID":"' + id + '", "Msg": {"cmd": "WRITE", "id":' + tagId + ' "data": "' + writeString +'"} }'+"\n");
     });

@@ -93,7 +93,10 @@ func (srv TCPServer) handleMessages() {
 				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", idMsg.ID)
 				break
 			}
-			// TODO message handling logic, SIP switch etc
+			if !idMsg.PassUnparsed {
+				// TODO message handling logic, SIP switch etc
+				break
+			}
 			bMsg.Write(idMsg.Msg)
 			bMsg.Write([]byte("\n"))
 			unit.ToRFID <- bMsg.Bytes()

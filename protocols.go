@@ -3,8 +3,9 @@ package main
 import "encoding/json"
 
 type encaspulatedUIMessage struct {
-	ID  string
-	Msg json.RawMessage
+	ID           string
+	PassUnparsed bool // if true; just send directly to rfidunit, otherwise parse json and dispatch to sip
+	Msg          json.RawMessage
 }
 
 // UIMessage represents a message from RFIDUnit to the test-webserver
