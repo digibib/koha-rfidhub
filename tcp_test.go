@@ -21,7 +21,7 @@ func TestTCPServer(t *testing.T) {
 		TCPPort: "6767",
 	}
 	srv := newTCPServer(cfg)
-	discardChan := make(chan UIMessage, 10)
+	discardChan := make(chan MsgToUI, 10)
 	srv.broadcast = discardChan
 	go srv.run()
 	time.Sleep(time.Millisecond * 10)
@@ -33,10 +33,8 @@ func TestTCPServer(t *testing.T) {
 	_, err = c.Write([]byte("PING\n"))
 	s.ExpectNil(err)
 
-	time.Sleep(time.Millisecond * 100)
-
-	srv.incoming <- []byte(`{ "ID":"` + addr2IP(c.LocalAddr().String()) + `",
-		"PassUnparsed": true, "Msg": {"cmd":"HI-FROM-SERVER!"} }`)
+	srv.incoming <- []byte(`{ "IP":"` + addr2IP(c.LocalAddr().String()) + `",
+		"Action": "RAW", "RawMsg": {"cmd":"HI-FROM-SERVER!"} }`)
 	r := bufio.NewReader(c)
 	msg, err := r.ReadString('\n')
 	s.ExpectNil(err)
