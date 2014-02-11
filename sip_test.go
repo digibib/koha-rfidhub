@@ -72,7 +72,7 @@ func TestSIPPatronAuthentication(t *testing.T) {
 
 	s.ExpectNil(err)
 	s.Expect(true, res.Authenticated)
-	s.Expect("patronid1", res.Patron)
+	s.Expect("patronid1", res.PatronID)
 }
 
 func TestSIPCheckin(t *testing.T) {

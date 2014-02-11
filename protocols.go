@@ -14,7 +14,8 @@ type MsgToUI struct {
 	IP            string
 	Action        string
 	Status        string
-	Patron        string
+	PatronID      string
+	PatronName    string
 	RawMsg        *json.RawMessage
 	Authenticated bool
 	Message       string

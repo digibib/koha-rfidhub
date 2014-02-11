@@ -100,7 +100,7 @@ func authParse(s string) *MsgToUI {
 	if fields["CQ"] == "Y" {
 		auth = true
 	}
-	return &MsgToUI{Action: "LOGIN", Authenticated: auth, Patron: fields["AA"]}
+	return &MsgToUI{Action: "LOGIN", Authenticated: auth, PatronID: fields["AA"], PatronName: fields["AE"]}
 }
 
 func checkinParse(s string) *MsgToUI {
