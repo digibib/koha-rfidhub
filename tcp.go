@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"net"
 
@@ -56,10 +55,7 @@ func newTCPServer(cfg *config) *TCPServer {
 }
 
 func (srv TCPServer) handleMessages() {
-	var (
-		uiReq MsgFromUI
-		bMsg  bytes.Buffer
-	)
+	var uiReq MsgFromUI
 	for {
 		select {
 		case unit := <-srv.addChan:
@@ -91,17 +87,7 @@ func (srv TCPServer) handleMessages() {
 				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", uiReq.IP)
 				break
 			}
-
-			switch uiReq.Action {
-			case "RAW":
-				// Pass message unparsed to RFID unit (from test webpage)
-				// TODO remove when done testing
-				bMsg.Write(*uiReq.RawMsg)
-				bMsg.Write([]byte("\n"))
-				unit.ToRFID <- bMsg.Bytes()
-				tcpLogger.Infof("<- UI raw msg to %v %v", uiReq.IP, string(*uiReq.RawMsg))
-				bMsg.Reset()
-			}
+			unit.FromUI <- uiReq
 		}
 	}
 }

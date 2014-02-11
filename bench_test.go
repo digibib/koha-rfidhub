@@ -23,7 +23,7 @@ func init() {
 		TCPPort: "3333",
 	}
 	srv := newTCPServer(cfg)
-	discardChan := make(chan UIMessage)
+	discardChan := make(chan MsgToUI)
 	srv.broadcast = discardChan
 	go func() {
 		for {

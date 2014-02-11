@@ -30,3 +30,12 @@ type item struct {
 	Status string // forfaller 10/03/2013
 	OK     bool   // false = mangler brikke / klarte ikke lese den
 }
+
+func ErrorResponse(ip string, errMsg error) MsgToUI {
+	return MsgToUI{
+		IP:           ip,
+		Action:       "ERROR",
+		Message:      "Noe gikk galt, det er ikke din feil!",
+		ErrorDetails: errMsg.Error(),
+	}
+}

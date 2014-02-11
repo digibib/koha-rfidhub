@@ -109,7 +109,7 @@
     $('#authenticate').on('click', function() {
       var user = $('#input-borrower').val();
       var pin = $('#input-pin').val();
-      var msg = { ID: rfidunit, Action: "AUTHENTICATE", Username: user, PIN: pin };
+      var msg = { IP: rfidunit, Action: "LOGIN", Username: user, PIN: pin };
       log(" -> "+JSON.stringify(msg));
       console.log(msg);
       ws.send(JSON.stringify(msg));

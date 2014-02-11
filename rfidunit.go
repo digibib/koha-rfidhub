@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"net"
 	"strings"
@@ -25,6 +26,7 @@ var rfidLogger = loggo.GetLogger("rfidunit")
 // RFIDUnit represents a connected RFID-unit (skrankeløsning)
 type RFIDUnit struct {
 	conn     net.Conn
+	FromUI   chan MsgFromUI
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
@@ -35,6 +37,7 @@ type RFIDUnit struct {
 func newRFIDUnit(c net.Conn) *RFIDUnit {
 	return &RFIDUnit{
 		conn:     c,
+		FromUI:   make(chan MsgFromUI),
 		FromRFID: make(chan []byte),
 		ToRFID:   make(chan []byte),
 		Quit:     make(chan bool),
@@ -42,8 +45,39 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 }
 
 func (u *RFIDUnit) run() {
+	var bMsg bytes.Buffer
 	for {
 		select {
+		case uiReq := <-u.FromUI:
+			switch uiReq.Action {
+			case "RAW":
+				// Pass message unparsed to RFID unit (from test webpage)
+				// TODO remove when done testing
+				bMsg.Write(*uiReq.RawMsg)
+				bMsg.Write([]byte("\n"))
+				u.ToRFID <- bMsg.Bytes()
+				tcpLogger.Infof("<- UI raw msg to %v %v", uiReq.IP, string(*uiReq.RawMsg))
+				bMsg.Reset()
+			case "LOGIN":
+				authRes, err := DoSIPCall(sipPool, sipFormMsgAuthenticate("HUTL", uiReq.Username, uiReq.PIN), authParse)
+				if err != nil {
+					srv.broadcast <- ErrorResponse(uiReq.IP, err)
+					break
+				}
+				authRes.IP = uiReq.IP
+				u.broadcast <- *authRes
+
+				// bRes, err := json.Marshal(authRes)
+				// if err != nil {
+				// 	srv.broadcast <- ErrorResponse(uiReq.IP, err)
+				// 	break
+				// }
+				// a.Authenticated = authRes.Authenticated
+				// if a.Authenticated {
+				// 	a.Patron = uiMsg.Username
+				// }
+				// a.ToUI <- bRes
+			}
 		case msg := <-u.FromRFID:
 			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n"))
 			var raw = json.RawMessage(msg)
