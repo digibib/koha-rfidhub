@@ -2,6 +2,13 @@ package main
 
 import "encoding/json"
 
+type RFIDMsg struct {
+	Cmd     string
+	Status  string
+	Barcode string
+	Data    []byte
+}
+
 type MsgFromUI struct {
 	IP       string
 	RawMsg   *json.RawMessage

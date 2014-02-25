@@ -23,6 +23,7 @@
     #borrower-id:before { content:'(';}
     #borrower-id:after { content: ')';}
     .tab { min-height: 300px;}
+    .auth-error { background: yellow;}
   </style>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 </head>
@@ -72,7 +73,7 @@
   <script>
   var rfidunit = {{.IP}};
   var borrowerID = "";
-  var borrowerPIN = "";
+  var borrowerName = "";
 
   function log(line) {
     var logLine = ""+new Date()
@@ -87,7 +88,7 @@
 
       ws.onmessage = function(resp) {
         var data = JSON.parse(resp.data);
-        console.log(data);
+        log(" <- "+resp.data);
         switch (data.Action) {
           case "CONNECT":
             log(" -- RFID-unit connected: "+data.ID);
@@ -95,9 +96,19 @@
           case "DISCONNECT":
             log(" -- RFID-unit disconnected: "+data.ID);
             break;
-          case "INFO":
-            log(" <- "+resp.data);
-            break;
+          case "LOGIN":
+            if (!data.Authenticated) {
+              $('.auth-error').html("Feil brukernavn eller PIN-kode");
+              break;
+            }
+            borrowerID = data.PatronID;
+            borrowerName = data.PatronName;
+            $('#borrower-name').html(borrowerName);
+            $('#borrower-id').html(borrowerID);
+            $('input').val("");
+            $('.authentication').addClass('hidden');
+            $('.checkout').removeClass("hidden");
+            ws.send(JSON.stringify({Action: "CHECKOUT"}));
         }
       };
     };
