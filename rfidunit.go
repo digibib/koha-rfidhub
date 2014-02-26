@@ -26,7 +26,7 @@ type RFIDUnit struct {
 	dept     string
 	vendor   Vendor
 	conn     net.Conn
-	FromUI   chan encapsulatedUIMsg
+	FromUI   chan UIMsg
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
@@ -40,7 +40,7 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 		dept:     "HUTL",
 		vendor:   newDeichmanVendor(),
 		conn:     c,
-		FromUI:   make(chan encapsulatedUIMsg),
+		FromUI:   make(chan UIMsg),
 		FromRFID: make(chan []byte),
 		ToRFID:   make(chan []byte),
 		Quit:     make(chan bool),
@@ -51,41 +51,29 @@ func (u *RFIDUnit) run() {
 	for {
 		select {
 		case uiReq := <-u.FromUI:
-			switch uiReq.Msg.Action {
-			// case "LOGIN":
-			// 	authRes, err := DoSIPCall(sipPool, sipFormMsgAuthenticate(u.dept, uiReq.Username, uiReq.PIN), authParse)
-			// 	if err != nil {
-			// 		srv.broadcast <- ErrorResponse(uiReq.IP, err)
-			// 		break
-			// 	}
-			// 	authRes.IP = uiReq.IP
-			// 	u.broadcast <- *authRes
-			// case "LOGOUT":
-			// 	u.state = UNITIdle
-			// 	rfidLogger.Infof("unit %v state IDLE", addr2IP(u.conn.RemoteAddr().String()))
-			// 	u.ToRFID <- []byte(`{"Cmd": "SCAN-OFF"}`)
+			switch uiReq.Action {
 			case "CHECKIN":
 				u.state = UNITCheckin
 				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(u.conn.RemoteAddr().String()))
-				u.ToRFID <- []byte(`{"Cmd": "SCAN-ON"}`)
+				u.vendor.Reset()
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
+				u.ToRFID <- r
 			case "CHECKOUT":
 				u.state = UNITCheckout
 				rfidLogger.Infof("unit %v state CHECKOUT", addr2IP(u.conn.RemoteAddr().String()))
-				u.ToRFID <- []byte(`{"Cmd": "SCAN-ON"}` + "\n")
+				u.vendor.Reset()
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
+				u.ToRFID <- r
 			}
 		case msg := <-u.FromRFID:
-			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n\r"))
+			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSpace(string(msg)))
 			_, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
+				// TODO reset state? UNITIdle & u.vendor.Reset()
 				break
 			}
-			// var raw = json.RawMessage(msg)
-			// u.broadcast <- encapsulatedUIMsg{
-			// 	IP:     addr2IP(u.conn.RemoteAddr().String()),
-			// 	RawMsg: &raw,
-			// 	Action: "INFO",
-			// }
+
 		case <-u.Quit:
 			// cleanup
 			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(u.conn.RemoteAddr().String()))
@@ -99,7 +87,7 @@ func (u *RFIDUnit) run() {
 func (u *RFIDUnit) tcpReader() {
 	r := bufio.NewReader(u.conn)
 	for {
-		msg, err := r.ReadBytes('\n')
+		msg, err := r.ReadBytes('\r')
 		if err != nil {
 			u.Quit <- true
 			break
@@ -117,7 +105,7 @@ func (u *RFIDUnit) tcpWriter() {
 			rfidLogger.Warningf(err.Error())
 			break
 		}
-		rfidLogger.Infof("-> RFIDUnit %v %v", u.conn.RemoteAddr().String(), strings.TrimSuffix(string(msg), "\n"))
+		rfidLogger.Infof("-> RFIDUnit %v %v", u.conn.RemoteAddr().String(), strings.TrimSpace(string(msg)))
 		err = w.Flush()
 		if err != nil {
 			rfidLogger.Warningf(err.Error())

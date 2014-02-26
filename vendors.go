@@ -55,6 +55,7 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 // ParseRFIDResp parses the RFID response.
 func (v *deichmanVendor) ParseRFIDResp(r []byte) (RFIDResp, error) {
 	s := strings.TrimSuffix(string(r), "\r")
+	s = strings.TrimPrefix(s, "\n")
 	l := len(s)
 
 	switch {

@@ -17,7 +17,7 @@
     #logg { font-family: monospace; list-style-type: none; padding:0; margin:0 ;}
     .tagid { width: 100px;}
     .hidden { display: none;}
-    .big { line-height:3em; width: 220px; font-weight: bold; margin:1em; cursor: pointer;}
+    .big { line-height:1.5em; width: 220px; font-weight: bold; margin:1em; cursor: pointer;}
     .selected { border: 1px dashed #888; cursor: default;}
     .authentication { margin: 2em 0;}
     #borrower-id:before { content:'(';}
@@ -30,21 +30,27 @@
   <div id="content">
 
   <h1>RFID brukergrensesnitt-test</h1>
-  <div class="buttons">
-      <button id="checkout" class="big">UTLÅN</button>
-      <button id="checkin" class="big">INNLEVERING</button>
-      <button id="alarmon" class="big">ALARM PÅ</button>
-      <button id="alarmoff" class="big">ALARM AV</button>
+  <hr/>
+  <button id="checkin" class="big">INNLEVERING</button>
+  <div class="tab checkin">
+    <table>
+      <thead>
+        <tr>
+          <th>Materiale</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="tr-item hidden">
+          <td class="td-item"></td>
+          <td class="td-status"></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
-
-  <div class="authentication hidden">
-    <input id="input-borrower" type="text" placeholder="lånenummer" />
-    <input id="input-pin" type="text" placeholder="PIN" />
-    <button id="authenticate">Autentisér</button>
-    <span class="auth-error"></span>
-  </div>
-  <div class="tab checkout hidden">
-    <h2>Utlån til <span id="borrower-name">Petter Goks</span> <span id="borrower-id">N001234553</span></h2>
+  <hr/>
+  <input type="text" id="patron" placeholder="Lånenummber" /><button id="checkout" class="big">UTLÅN</button>
+    <div class="tab checkout">
     <table>
       <thead>
         <tr>
@@ -71,10 +77,6 @@
 
 <body>
   <script>
-  var rfidunit = {{.IP}};
-  var borrowerID = "";
-  var borrowerName = "";
-
   function log(line) {
     var logLine = ""+new Date()
     logLine = logLine.substring(16,24) + line;
@@ -82,7 +84,7 @@
   }
 
   $(document).ready(function() {
-    var ws=new WebSocket('ws://{{.Host}}/ws?ip={{.IP}}');
+    var ws=new WebSocket('ws://{{.Host}}/ws');
     ws.onopen = function() {
       console.log("connected");
 
@@ -90,25 +92,14 @@
         var data = JSON.parse(resp.data);
         log(" <- "+resp.data);
         switch (data.Action) {
-          case "CONNECT":
-            log(" -- RFID-unit connected: "+data.ID);
+          case "CHECKIN":
+            log(" checkin item");
             break;
-          case "DISCONNECT":
-            log(" -- RFID-unit disconnected: "+data.ID);
+          case "CHECKOUT":
+            log("checkout item");
             break;
-          case "LOGIN":
-            if (!data.Authenticated) {
-              $('.auth-error').html("Feil brukernavn eller PIN-kode");
-              break;
-            }
-            borrowerID = data.PatronID;
-            borrowerName = data.PatronName;
-            $('#borrower-name').html(borrowerName);
-            $('#borrower-id').html(borrowerID);
-            $('input').val("");
-            $('.authentication').addClass('hidden');
-            $('.checkout').removeClass("hidden");
-            ws.send(JSON.stringify({Action: "CHECKOUT"}));
+          default:
+            log("Unknown message:" + resp.data);
         }
       };
     };
@@ -117,23 +108,16 @@
       // TODO try to reconnecd SetInterval 1 sec
     };
 
-    $('#authenticate').on('click', function() {
-      var user = $('#input-borrower').val();
-      var pin = $('#input-pin').val();
-      var msg = { IP: rfidunit, Action: "LOGIN", Username: user, PIN: pin };
-      log(" -> "+JSON.stringify(msg));
-      console.log(msg);
-      ws.send(JSON.stringify(msg));
-    });
-
     $('#checkout').on('click', function() {
-      console.log('checking out');
-      $('.tab').addClass('hidden');
-      $('.authentication').removeClass('hidden')
+      msg = JSON.stringify({Action: "CHECKOUT", Patron: $('#patron').val()});
+      log(" -> "+msg);
+      ws.send(msg);
     });
 
     $('#checkin').on('click', function() {
-      console.log('checking in');
+      msg = JSON.stringify({Action: "CHECKIN"});
+      log(" -> "+msg);
+      ws.send(msg);
     });
 
     $('#alarmon').on('click', function() {

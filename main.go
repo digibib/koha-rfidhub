@@ -19,7 +19,7 @@ var (
 	uiHub      *wsHub
 	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
 	logger     = loggo.GetLogger("main")
-	rootLogger = loggo.GetLogger("")
+	rootLogger = loggo.GetLogger("") // TODO what is this, remove?
 )
 
 // APPLICATION ENTRY POINT

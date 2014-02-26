@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"net"
 
 	"github.com/loggo/loggo"
@@ -11,11 +10,11 @@ var tcpLogger = loggo.GetLogger("tcp")
 
 // TCPServer listens for and accepts connections from RFID-units
 type TCPServer struct {
-	listenAddr  string               // Host:port to listen at
-	connections map[string]*RFIDUnit // Keyed by the unit's IP address
-	addChan     chan *RFIDUnit       // Register a RFIDUnit
-	rmChan      chan *RFIDUnit       // Remove a RFIDUnit
-	incoming    chan []byte          // Incoming messages (going to) RFIDUnits from UI
+	listenAddr  string                 // Host:port to listen at
+	connections map[string]*RFIDUnit   // Keyed by the unit's IP address
+	addChan     chan *RFIDUnit         // Register a RFIDUnit
+	rmChan      chan *RFIDUnit         // Remove a RFIDUnit
+	fromUI      chan encapsulatedUIMsg // Incoming messages (going to) RFIDUnits from UI
 
 	// Channel to broadcast to (normally handled by websocket hub)
 	broadcast chan encapsulatedUIMsg
@@ -49,13 +48,12 @@ func newTCPServer(cfg *config) *TCPServer {
 		listenAddr:  ":" + cfg.TCPPort,
 		addChan:     make(chan *RFIDUnit),
 		rmChan:      make(chan *RFIDUnit),
-		incoming:    make(chan []byte),
+		fromUI:      make(chan encapsulatedUIMsg),
 		broadcast:   make(chan encapsulatedUIMsg),
 	}
 }
 
 func (srv TCPServer) handleMessages() {
-	var uiReq encapsulatedUIMsg
 	for {
 		select {
 		case unit := <-srv.addChan:
@@ -76,18 +74,13 @@ func (srv TCPServer) handleMessages() {
 				Msg: UIMsg{Action: "DISCONNECT"},
 				IP:  ip}
 			delete(srv.connections, ip)
-		case msg := <-srv.incoming:
-			err := json.Unmarshal(msg, &uiReq)
-			if err != nil {
-				tcpLogger.Warningf(err.Error())
-				break
-			}
-			unit, ok := srv.connections[uiReq.IP]
+		case msg := <-srv.fromUI:
+			unit, ok := srv.connections[msg.IP]
 			if !ok {
-				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", uiReq.IP)
+				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", msg.IP)
 				break
 			}
-			unit.FromUI <- uiReq
+			unit.FromUI <- msg.Msg
 		}
 	}
 }

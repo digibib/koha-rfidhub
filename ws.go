@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+
 	"github.com/gorilla/websocket"
 	"github.com/loggo/loggo"
 )
@@ -30,7 +32,15 @@ func (c *uiConn) reader() {
 		if err != nil {
 			break
 		}
-		srv.incoming <- msg
+		var m UIMsg
+		err = json.Unmarshal(msg, &m)
+		if err != nil {
+			continue
+		}
+		srv.fromUI <- encapsulatedUIMsg{
+			IP:  addr2IP(c.ws.RemoteAddr().String()),
+			Msg: m,
+		}
 	}
 }
 
