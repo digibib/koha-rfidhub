@@ -154,7 +154,6 @@ func checkoutParse(s string) UIMsg {
 func itemStatusParse(s string) UIMsg {
 	// 1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|
 	_, b := s[:43], s[43:]
-	println(b)
 	fields := pairFieldIDandValue(b)
 	return UIMsg{Item: item{OK: false, Label: fields["AJ"]}}
 }
