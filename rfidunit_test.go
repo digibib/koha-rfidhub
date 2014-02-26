@@ -125,8 +125,22 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 		t.Fatal("UI didn't get the correct message after checkin")
 	}
 
-	//
+	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
+	// notified with the books title, along with an error message
+	sipPool.Init(1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	d.c.Write([]byte("RDT1003010824124004:NO:02030000|1\r"))
+	uiMsg = <-uiChan
 
+	want = UIMsg{Action: "CHECKIN",
+		Item: item{
+			Label:  "Heavy metal in Baghdad",
+			OK:     false,
+			Status: "IKKE innlevert; mangler brikke!",
+		}}
+	if !reflect.DeepEqual(uiMsg.Msg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg.Msg, want)
+		t.Fatal("UI didn't get the correct message when item is missing tags")
+	}
 	// // Verify that the RFID-unit gets END message when the corresponding
 	// // websocket connection is closed.
 	// a.c.Close()

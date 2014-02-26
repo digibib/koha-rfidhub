@@ -24,6 +24,9 @@ const (
 
 	// 11: Checkout
 	sipMsg11 = "11YN%v%vAO<institutionid>|AA%s|AB%s|AC<terminalpassword>|\r"
+
+	// 17: Item status
+	sipMsg17 = "17%vAO<institutionid>|AB%s|AC<terminalpassword>|\r"
 )
 
 var sipLogger = loggo.GetLogger("sip")
@@ -46,6 +49,11 @@ func sipFormMsgCheckin(dept, barcode string) string {
 func sipFormMsgCheckout(username, barcode string) string {
 	now := time.Now().Format(sipDateLayout)
 	return fmt.Sprintf(sipMsg11, now, now, username, barcode)
+}
+
+func sipFormMsgItemStatus(barcode string) string {
+	now := time.Now().Format(sipDateLayout)
+	return fmt.Sprintf(sipMsg17, now, barcode)
 }
 
 func pairFieldIDandValue(msg string) map[string]string {
@@ -141,4 +149,12 @@ func checkoutParse(s string) UIMsg {
 		}
 	}
 	return UIMsg{Item: item{OK: ok, Status: status, Label: fields["AJ"]}}
+}
+
+func itemStatusParse(s string) UIMsg {
+	// 1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|
+	_, b := s[:43], s[43:]
+	println(b)
+	fields := pairFieldIDandValue(b)
+	return UIMsg{Item: item{OK: false, Label: fields["AJ"]}}
 }

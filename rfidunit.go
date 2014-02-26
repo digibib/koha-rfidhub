@@ -74,22 +74,41 @@ func (u *RFIDUnit) run() {
 				break
 			}
 			if !r.OK {
-				// TODO SIP get status of item, to have title to display on screen,
-				// together with message (brikke mangler e.l.)
-			}
-
-			switch u.state {
-			case UNITCheckin:
-				sipRes, err := DoSIPCall(sipPool, sipFormMsgCheckin("hutl", "03011174511003"), checkinParse)
+				// get status of item, to have title to display on screen,
+				sipRes, err := DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
 				if err != nil {
 					sipLogger.Errorf(err.Error())
 					// TODO give UI error response?
 					break
 				}
+				switch u.state {
+				case UNITCheckin:
+					sipRes.Action = "CHECKIN"
+					sipRes.Item.Status = "IKKE innlevert; mangler brikke!"
+				case UNITCheckout:
+					sipRes.Action = "CHECKOUT"
+					sipRes.Item.Status = "IKKE lånt ut; mangler brikke!"
+				}
 				u.broadcast <- encapsulatedUIMsg{
 					IP:  addr2IP(u.conn.RemoteAddr().String()),
 					Msg: sipRes,
 				}
+			} else {
+				// proceed with checkin or checkout transaciton
+				switch u.state {
+				case UNITCheckin:
+					sipRes, err := DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
+					if err != nil {
+						sipLogger.Errorf(err.Error())
+						// TODO give UI error response?
+						break
+					}
+					u.broadcast <- encapsulatedUIMsg{
+						IP:  addr2IP(u.conn.RemoteAddr().String()),
+						Msg: sipRes,
+					}
+				}
+
 			}
 
 		case <-u.Quit:
