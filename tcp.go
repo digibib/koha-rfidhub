@@ -64,15 +64,15 @@ func (srv TCPServer) handleMessages() {
 				oldunit.conn.Close()
 			}
 			srv.connections[ip] = unit
-			srv.broadcast <- encapsulatedUIMsg{
-				Msg: UIMsg{Action: "CONNECT"},
-				IP:  ip}
+			// srv.broadcast <- encapsulatedUIMsg{
+			// 	Msg: UIMsg{Action: "CONNECT"},
+			// 	IP:  ip}
 		case unit := <-srv.rmChan:
 			tcpLogger.Infof("RFID-unit disconnected %v", unit.conn.RemoteAddr())
 			var ip = addr2IP(unit.conn.RemoteAddr().String())
-			srv.broadcast <- encapsulatedUIMsg{
-				Msg: UIMsg{Action: "DISCONNECT"},
-				IP:  ip}
+			// srv.broadcast <- encapsulatedUIMsg{
+			// 	Msg: UIMsg{Action: "DISCONNECT"},
+			// 	IP:  ip}
 			delete(srv.connections, ip)
 		case msg := <-srv.fromUI:
 			unit, ok := srv.connections[msg.IP]

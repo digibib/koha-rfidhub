@@ -67,11 +67,29 @@ func (u *RFIDUnit) run() {
 			}
 		case msg := <-u.FromRFID:
 			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSpace(string(msg)))
-			_, err := u.vendor.ParseRFIDResp(msg)
+			r, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
 				// TODO reset state? UNITIdle & u.vendor.Reset()
 				break
+			}
+			if !r.OK {
+				// TODO SIP get status of item, to have title to display on screen,
+				// together with message (brikke mangler e.l.)
+			}
+
+			switch u.state {
+			case UNITCheckin:
+				sipRes, err := DoSIPCall(sipPool, sipFormMsgCheckin("hutl", "03011174511003"), checkinParse)
+				if err != nil {
+					sipLogger.Errorf(err.Error())
+					// TODO give UI error response?
+					break
+				}
+				u.broadcast <- encapsulatedUIMsg{
+					IP:  addr2IP(u.conn.RemoteAddr().String()),
+					Msg: sipRes,
+				}
 			}
 
 		case <-u.Quit:

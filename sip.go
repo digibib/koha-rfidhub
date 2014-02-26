@@ -118,7 +118,8 @@ func checkinParse(s string) UIMsg {
 	} else {
 		status = fmt.Sprintf("registrert innlevert %s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
-	return UIMsg{Item: item{OK: ok, Label: fields["AJ"], Status: status}}
+	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
+	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {
