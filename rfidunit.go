@@ -3,13 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"net"
 	"strings"
 
 	"github.com/loggo/loggo"
 )
 
+// UnitState represent the current mode of a RFID-unit.
 type UnitState uint8
 
 const (
@@ -25,6 +25,7 @@ var rfidLogger = loggo.GetLogger("rfidunit")
 type RFIDUnit struct {
 	state    UnitState
 	dept     string
+	vendor   Vendor
 	conn     net.Conn
 	FromUI   chan MsgFromUI
 	FromRFID chan []byte
@@ -38,6 +39,7 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 	return &RFIDUnit{
 		state:    UNITIdle,
 		dept:     "HUTL",
+		vendor:   newDeichmanVendor(),
 		conn:     c,
 		FromUI:   make(chan MsgFromUI),
 		FromRFID: make(chan []byte),
@@ -48,7 +50,6 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 
 func (u *RFIDUnit) run() {
 	var bMsg bytes.Buffer
-	var rfidMsg RFIDMsg
 	for {
 		select {
 		case uiReq := <-u.FromUI:
@@ -83,28 +84,18 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- []byte(`{"Cmd": "SCAN-ON"}` + "\n")
 			}
 		case msg := <-u.FromRFID:
-			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n"))
-			err := json.Unmarshal(msg, &rfidMsg)
+			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSuffix(string(msg), "\n\r"))
+			_, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
 				break
 			}
-			switch rfidMsg.Cmd {
-			case "READ":
-				if u.state == UNITCheckin {
-					break
-				}
-				if u.state == UNITCheckout {
-					break
-				}
-				rfidLogger.Warningf("dunno what to do with that msg from rfidunit")
-			}
-			var raw = json.RawMessage(msg)
-			u.broadcast <- MsgToUI{
-				IP:     addr2IP(u.conn.RemoteAddr().String()),
-				RawMsg: &raw,
-				Action: "INFO",
-			}
+			// var raw = json.RawMessage(msg)
+			// u.broadcast <- MsgToUI{
+			// 	IP:     addr2IP(u.conn.RemoteAddr().String()),
+			// 	RawMsg: &raw,
+			// 	Action: "INFO",
+			// }
 		case <-u.Quit:
 			// cleanup
 			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(u.conn.RemoteAddr().String()))
