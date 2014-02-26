@@ -118,7 +118,7 @@ func checkinParse(s string) *MsgToUI {
 	} else {
 		status = fmt.Sprintf("registrert innlevert %s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
-	return &MsgToUI{Item: item{OK: ok, Title: fields["AJ"], Status: status}}
+	return &MsgToUI{Item: item{OK: ok, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) *MsgToUI {
@@ -139,5 +139,5 @@ func checkoutParse(s string) *MsgToUI {
 			status = fields["AF"]
 		}
 	}
-	return &MsgToUI{Item: item{OK: ok, Status: status, Title: fields["AJ"]}}
+	return &MsgToUI{Item: item{OK: ok, Status: status, Label: fields["AJ"]}}
 }

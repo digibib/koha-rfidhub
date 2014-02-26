@@ -85,7 +85,7 @@ func TestSIPCheckin(t *testing.T) {
 
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.OK)
-	s.Expect("316 salmer og sanger", res.Item.Title)
+	s.Expect("316 salmer og sanger", res.Item.Label)
 	s.Expect("registrert innlevert 24/01/2014", res.Item.Status)
 
 	p.Init(1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
@@ -102,7 +102,7 @@ func TestSIPCheckout(t *testing.T) {
 
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.OK)
-	s.Expect("Krutt-Kim", res.Item.Title)
+	s.Expect("Krutt-Kim", res.Item.Label)
 	s.Expect("utlånt til 21/02/2014", res.Item.Status)
 
 	p.Init(1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))

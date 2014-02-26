@@ -75,7 +75,7 @@ type MsgToUI struct {
 }
 
 type item struct {
-	Title  string // [bok] Forfatter - tittel
+	Label  string // [bok] Forfatter - tittel
 	Status string // forfaller 10/03/2013
 	OK     bool   // false = mangler brikke / klarte ikke lese den
 }
