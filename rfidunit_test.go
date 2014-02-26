@@ -109,11 +109,16 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	}
 
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
-	// SIP and that UI get's notified of the transaction
+	// SIP, the Alarm turned on, and that UI get's notified of the transaction
 	sipPool.Init(1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|AA2|CS927.8|\r"))
 	d.c.Write([]byte("RDT1003010824124004:NO:02030000|0\r"))
-	uiMsg := <-uiChan
 
+	msg = <-d.incoming
+	if string(msg) != "OK1\r" {
+		t.Errorf("Alarm didnt get turn on after checkin")
+	}
+
+	uiMsg := <-uiChan
 	want := UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:  "Heavy metal in Baghdad",
@@ -129,8 +134,13 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	// notified with the books title, along with an error message
 	sipPool.Init(1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	d.c.Write([]byte("RDT1003010824124004:NO:02030000|1\r"))
-	uiMsg = <-uiChan
 
+	msg = <-d.incoming
+	if string(msg) != "OK\r" {
+		t.Errorf("Alarm was changed after unsuccessful checkin")
+	}
+
+	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:  "Heavy metal in Baghdad",
@@ -156,4 +166,9 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	if string(msg) != "END\r" {
 		t.Fatal("RFID-unit didn't get END message when UI connection was lost")
 	}
+
+	// Disconnect RFIDUnit
+	d.c.Close()
+	time.Sleep(10 * time.Millisecond)
+	// TODO verify what?
 }

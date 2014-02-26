@@ -74,6 +74,9 @@ func (u *RFIDUnit) run() {
 				break
 			}
 			if !r.OK {
+				// send cmdRerad to RFIDunit
+				// TODO
+
 				// get status of item, to have title to display on screen,
 				sipRes, err := DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
 				if err != nil {
@@ -89,6 +92,7 @@ func (u *RFIDUnit) run() {
 					sipRes.Action = "CHECKOUT"
 					sipRes.Item.Status = "IKKE lånt ut; mangler brikke!"
 				}
+				u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 				u.broadcast <- encapsulatedUIMsg{
 					IP:  addr2IP(u.conn.RemoteAddr().String()),
 					Msg: sipRes,
@@ -103,6 +107,7 @@ func (u *RFIDUnit) run() {
 						// TODO give UI error response?
 						break
 					}
+					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.broadcast <- encapsulatedUIMsg{
 						IP:  addr2IP(u.conn.RemoteAddr().String()),
 						Msg: sipRes,
