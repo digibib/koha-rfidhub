@@ -73,6 +73,7 @@ func (h *wsHub) run() {
 			if _, ok := h.connections[c]; !ok {
 				break
 			}
+			srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
 			delete(h.connections, c)
 			close(c.send)
 			wsLogger.Infof("WS   Disconnected")
@@ -83,6 +84,7 @@ func (h *wsHub) run() {
 					select {
 					case c.send <- msg:
 					default:
+						srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
 						close(c.send)
 						delete(h.connections, c)
 					}

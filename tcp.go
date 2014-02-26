@@ -14,6 +14,7 @@ type TCPServer struct {
 	connections map[string]*RFIDUnit   // Keyed by the unit's IP address
 	addChan     chan *RFIDUnit         // Register a RFIDUnit
 	rmChan      chan *RFIDUnit         // Remove a RFIDUnit
+	stopChan    chan string            // Send END message to RFIDUnit, keyed by IP
 	fromUI      chan encapsulatedUIMsg // Incoming messages (going to) RFIDUnits from UI
 
 	// Channel to broadcast to (normally handled by websocket hub)
@@ -49,7 +50,8 @@ func newTCPServer(cfg *config) *TCPServer {
 		addChan:     make(chan *RFIDUnit),
 		rmChan:      make(chan *RFIDUnit),
 		fromUI:      make(chan encapsulatedUIMsg),
-		broadcast:   make(chan encapsulatedUIMsg),
+		stopChan:    make(chan string),
+		broadcast:   make(chan encapsulatedUIMsg), // TODO rename toUI?
 	}
 }
 
@@ -81,6 +83,13 @@ func (srv TCPServer) handleMessages() {
 				break
 			}
 			unit.FromUI <- msg.Msg
+		case ip := <-srv.stopChan:
+			unit, ok := srv.connections[ip]
+			if !ok {
+				tcpLogger.Warningf("Cannot transmit message to missing RFIDunit %#v", ip)
+				break
+			}
+			unit.ToRFID <- unit.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 		}
 	}
 }

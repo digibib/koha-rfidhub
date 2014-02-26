@@ -141,12 +141,19 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 		t.Errorf("Got %+v; want %+v", uiMsg.Msg, want)
 		t.Fatal("UI didn't get the correct message when item is missing tags")
 	}
-	// // Verify that the RFID-unit gets END message when the corresponding
-	// // websocket connection is closed.
-	// a.c.Close()
 
-	// msg = <-d.incoming
-	// if string(msg) != "END\r" {
-	// 	t.Fatal("RFID-unit didn't get END message when UI connection was lost")
-	// }
+	// Test successfull checkout
+	// TODO
+
+	// Test unsucsessfull checkout
+	// TODO
+
+	// Verify that the RFID-unit gets END message when the corresponding
+	// websocket connection is closed.
+	a.c.Close()
+
+	msg = <-d.incoming
+	if string(msg) != "END\r" {
+		t.Fatal("RFID-unit didn't get END message when UI connection was lost")
+	}
 }
