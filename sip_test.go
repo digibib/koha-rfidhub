@@ -63,18 +63,18 @@ func TestFieldPairs(t *testing.T) {
 	s.ExpectAll(tests)
 }
 
-func TestSIPPatronAuthentication(t *testing.T) {
-	s := specs.New(t)
-	p := &ConnPool{}
-	p.Init(1, fakeSIPResponse("64              01220140123    093212000000030003000000000000AOHUTL|AApatronid1|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|AFGreetings from Koha. |\r"))
+// func TestSIPPatronAuthentication(t *testing.T) {
+// 	s := specs.New(t)
+// 	p := &ConnPool{}
+// 	p.Init(1, fakeSIPResponse("64              01220140123    093212000000030003000000000000AOHUTL|AApatronid1|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|AFGreetings from Koha. |\r"))
 
-	res, err := DoSIPCall(p, sipFormMsgAuthenticate("HUTL", "patronid1", "pass"), authParse)
+// 	res, err := DoSIPCall(p, sipFormMsgAuthenticate("HUTL", "patronid1", "pass"), authParse)
 
-	s.ExpectNil(err)
-	s.Expect(true, res.Authenticated)
-	s.Expect("patronid1", res.PatronID)
-	s.Expect("Fillip Wahl", res.PatronName)
-}
+// 	s.ExpectNil(err)
+// 	s.Expect(true, res.Authenticated)
+// 	s.Expect("patronid1", res.PatronID)
+// 	s.Expect("Fillip Wahl", res.PatronName)
+// }
 
 func TestSIPCheckin(t *testing.T) {
 	s := specs.New(t)

@@ -60,12 +60,12 @@ func pairFieldIDandValue(msg string) map[string]string {
 
 // A parserFunc parses a SIP response. It extracts the desired information and
 // returns the JSON message to be sent to the user interface.
-type parserFunc func(string) *MsgToUI
+type parserFunc func(string) UIMsg
 
 // DoSIPCall performs a SIP request with an automat's SIP TCP-connection. It
 // takes a SIP message as a string and a parser function to transform the SIP
-// response into a MsgToUI.
-func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*MsgToUI, error) {
+// response into a UIMsg.
+func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
 	c := p.Get()
 	defer p.Release(c)
@@ -73,7 +73,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*MsgToUI, error) {
 	// 1. Send the SIP request
 	_, err := c.Write([]byte(req))
 	if err != nil {
-		return nil, err
+		return UIMsg{}, err
 	}
 
 	// 2. Read SIP response
@@ -81,7 +81,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*MsgToUI, error) {
 	reader := bufio.NewReader(c)
 	resp, err := reader.ReadString('\r')
 	if err != nil {
-		return nil, err
+		return UIMsg{}, err
 	}
 
 	sipLogger.Infof("<- %v", strings.Trim(resp, "\n\r"))
@@ -92,18 +92,18 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (*MsgToUI, error) {
 	return res, nil
 }
 
-func authParse(s string) *MsgToUI {
-	b := s[61:] // first part of SIPresponse not needed here
-	fields := pairFieldIDandValue(b)
+// func authParse(s string) UIMsg {
+// 	b := s[61:] // first part of SIPresponse not needed here
+// 	fields := pairFieldIDandValue(b)
 
-	var auth bool
-	if fields["CQ"] == "Y" {
-		auth = true
-	}
-	return &MsgToUI{Action: "LOGIN", Authenticated: auth, PatronID: fields["AA"], PatronName: fields["AE"]}
-}
+// 	var auth bool
+// 	if fields["CQ"] == "Y" {
+// 		auth = true
+// 	}
+// 	return UIMsg{Action: "LOGIN", Authenticated: auth, PatronID: fields["AA"], PatronName: fields["AE"]}
+// }
 
-func checkinParse(s string) *MsgToUI {
+func checkinParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
 		ok     bool
@@ -118,10 +118,10 @@ func checkinParse(s string) *MsgToUI {
 	} else {
 		status = fmt.Sprintf("registrert innlevert %s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
-	return &MsgToUI{Item: item{OK: ok, Label: fields["AJ"], Status: status}}
+	return UIMsg{Item: item{OK: ok, Label: fields["AJ"], Status: status}}
 }
 
-func checkoutParse(s string) *MsgToUI {
+func checkoutParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
 		ok     bool
@@ -139,5 +139,5 @@ func checkoutParse(s string) *MsgToUI {
 			status = fields["AF"]
 		}
 	}
-	return &MsgToUI{Item: item{OK: ok, Status: status, Label: fields["AJ"]}}
+	return UIMsg{Item: item{OK: ok, Status: status, Label: fields["AJ"]}}
 }

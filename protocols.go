@@ -1,9 +1,5 @@
 package main
 
-import (
-	"encoding/json"
-)
-
 // RFID-unit message protocol /////////////////////////////////////////////////
 
 // Vendor interface which any RFID-vendor must satisfy. In order for a vendor
@@ -50,28 +46,13 @@ type RFIDResp struct {
 }
 
 // UI message protocol ////////////////////////////////////////////////////////
+// For communication between Koha's web intranet interface and the RFID-hub.
 
-type MsgFromUI struct {
-	IP       string
-	RawMsg   *json.RawMessage
-	Action   string
-	Username string
-	PIN      string
-}
-
-type MsgToUI struct {
-	IP            string
-	Action        string
-	Status        string
-	PatronID      string
-	PatronName    string
-	RawMsg        *json.RawMessage
-	Authenticated bool
-	Message       string
-	ErrorDetails  string
-	Item          item
-	// Loans         []item
-	// Holdings      []item
+type encapsulatedUIMsg struct {
+	IP           string
+	Error        string
+	ErrorDetails string
+	Msg          UIMsg
 }
 
 type item struct {
@@ -80,11 +61,16 @@ type item struct {
 	OK     bool   // false = mangler brikke / klarte ikke lese den
 }
 
-func ErrorResponse(ip string, errMsg error) MsgToUI {
-	return MsgToUI{
+type UIMsg struct {
+	Action string // CHECKIN/CHECKOUT/ERROR
+	Item   item
+}
+
+func ErrorResponse(ip string, errMsg error) encapsulatedUIMsg {
+	return encapsulatedUIMsg{
 		IP:           ip,
-		Action:       "ERROR",
-		Message:      "Noe gikk galt, det er ikke din feil!",
+		Msg:          UIMsg{Action: "ERROR"},
+		Error:        "Noe gikk galt, det er ikke din feil!",
 		ErrorDetails: errMsg.Error(),
 	}
 }

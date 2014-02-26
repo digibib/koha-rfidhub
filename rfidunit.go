@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"net"
 	"strings"
 
@@ -27,12 +26,12 @@ type RFIDUnit struct {
 	dept     string
 	vendor   Vendor
 	conn     net.Conn
-	FromUI   chan MsgFromUI
+	FromUI   chan encapsulatedUIMsg
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
 	// Broadcast all events to this channel
-	broadcast chan MsgToUI
+	broadcast chan encapsulatedUIMsg
 }
 
 func newRFIDUnit(c net.Conn) *RFIDUnit {
@@ -41,7 +40,7 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 		dept:     "HUTL",
 		vendor:   newDeichmanVendor(),
 		conn:     c,
-		FromUI:   make(chan MsgFromUI),
+		FromUI:   make(chan encapsulatedUIMsg),
 		FromRFID: make(chan []byte),
 		ToRFID:   make(chan []byte),
 		Quit:     make(chan bool),
@@ -49,31 +48,22 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 }
 
 func (u *RFIDUnit) run() {
-	var bMsg bytes.Buffer
 	for {
 		select {
 		case uiReq := <-u.FromUI:
-			switch uiReq.Action {
-			case "RAW":
-				// Pass message unparsed to RFID unit (from test webpage)
-				// TODO remove when done testing
-				bMsg.Write(*uiReq.RawMsg)
-				bMsg.Write([]byte("\n"))
-				u.ToRFID <- bMsg.Bytes()
-				tcpLogger.Infof("<- UI raw msg to %v %v", uiReq.IP, string(*uiReq.RawMsg))
-				bMsg.Reset()
-			case "LOGIN":
-				authRes, err := DoSIPCall(sipPool, sipFormMsgAuthenticate(u.dept, uiReq.Username, uiReq.PIN), authParse)
-				if err != nil {
-					srv.broadcast <- ErrorResponse(uiReq.IP, err)
-					break
-				}
-				authRes.IP = uiReq.IP
-				u.broadcast <- *authRes
-			case "LOGOUT":
-				u.state = UNITIdle
-				rfidLogger.Infof("unit %v state IDLE", addr2IP(u.conn.RemoteAddr().String()))
-				u.ToRFID <- []byte(`{"Cmd": "SCAN-OFF"}`)
+			switch uiReq.Msg.Action {
+			// case "LOGIN":
+			// 	authRes, err := DoSIPCall(sipPool, sipFormMsgAuthenticate(u.dept, uiReq.Username, uiReq.PIN), authParse)
+			// 	if err != nil {
+			// 		srv.broadcast <- ErrorResponse(uiReq.IP, err)
+			// 		break
+			// 	}
+			// 	authRes.IP = uiReq.IP
+			// 	u.broadcast <- *authRes
+			// case "LOGOUT":
+			// 	u.state = UNITIdle
+			// 	rfidLogger.Infof("unit %v state IDLE", addr2IP(u.conn.RemoteAddr().String()))
+			// 	u.ToRFID <- []byte(`{"Cmd": "SCAN-OFF"}`)
 			case "CHECKIN":
 				u.state = UNITCheckin
 				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(u.conn.RemoteAddr().String()))
@@ -91,7 +81,7 @@ func (u *RFIDUnit) run() {
 				break
 			}
 			// var raw = json.RawMessage(msg)
-			// u.broadcast <- MsgToUI{
+			// u.broadcast <- encapsulatedUIMsg{
 			// 	IP:     addr2IP(u.conn.RemoteAddr().String()),
 			// 	RawMsg: &raw,
 			// 	Action: "INFO",
