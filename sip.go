@@ -81,6 +81,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 	// 1. Send the SIP request
 	_, err := c.Write([]byte(req))
 	if err != nil {
+		// TODO refill Pool if conn is bad
 		return UIMsg{}, err
 	}
 
