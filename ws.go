@@ -66,7 +66,7 @@ func (h *wsHub) run() {
 		select {
 		case c := <-h.uiReg:
 			h.connections[c] = true
-			wsLogger.Infof("WS   Connected")
+			wsLogger.Infof("WS   Connected %v", addr2IP(c.ws.RemoteAddr().String()))
 		case c := <-h.uiUnReg:
 			// TODO I shouldnt have to do this; but got panic because
 			//      "close of closed channel" on some occations.

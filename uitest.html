@@ -23,7 +23,7 @@
     #borrower-id:before { content:'(';}
     #borrower-id:after { content: ')';}
     .tab { min-height: 300px;}
-    .auth-error { background: yellow;}
+    .error { background: yellow;}
   </style>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
 </head>
@@ -89,14 +89,19 @@
       console.log("connected");
 
       ws.onmessage = function(resp) {
-        var data = JSON.parse(resp.data);
+        var msg = JSON.parse(resp.data).Msg;
         log(" <- "+resp.data);
-        switch (data.Action) {
+        switch (msg.Action) {
           case "CHECKIN":
-            log(" checkin item");
+            var $tr = $('.checkin .tr-item.hidden').clone().removeClass('hidden');
+            $tr.find('.td-item').html(msg.Item.Label);
+            $tr.find('.td-status').html(msg.Item.Status);
+            if (!msg.Item.OK) {
+              $tr.addClass('error');
+            }
+            $('.checkin tbody').append($tr);
             break;
           case "CHECKOUT":
-            log("checkout item");
             break;
           default:
             log("Unknown message:" + resp.data);

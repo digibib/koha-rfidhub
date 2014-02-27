@@ -51,11 +51,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v := r.URL.Query()
 	c := &uiConn{
 		send:     make(chan encapsulatedUIMsg),
 		ws:       ws,
-		ipFilter: v.Get("ip")}
+		ipFilter: addr2IP(ws.RemoteAddr().String())}
 
 	uiHub.uiReg <- c
 	defer func() {
