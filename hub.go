@@ -58,27 +58,23 @@ func (h *Hub) run() {
 				// The User must refresh the UI page to try to establish the
 				// RFID TCP connection again.
 				// Notify UI of failure to connect to RFID-unit:
-				c.send <- encapsulatedUIMsg{IP: ip, Msg: UIMsg{
-					Action: "CONNECT", RFIDError: true,
-				}}
+				c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
 				break
 			}
 
 			hubLogger.Infof("RFID-unit[%v:%v] connected", ip, cfg.TCPPort)
 
 			// Initialize the RFID-unit state-machine with the TCP connection:
-			unit := newRFIDUnit(conn)
+			unit := newRFIDUnit(conn, c.send)
 			c.unit = unit
 			go unit.run()
 			go unit.tcpWriter()
 			go unit.tcpReader()
 			// Notify UI of success:
-			c.send <- encapsulatedUIMsg{IP: ip, Msg: UIMsg{Action: "CONNECT"}}
+			c.send <- UIMsg{Action: "CONNECT"}
 		case c := <-h.tcpLost:
 			// Notify the UI of lost connection to the RFID-unit:
-			c.send <- encapsulatedUIMsg{IP: addr2IP(c.ws.RemoteAddr().String()), Msg: UIMsg{
-				Action: "CONNECT", RFIDError: true,
-			}}
+			c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
 			// Shutdown the RFID-unit state-machine:
 			// c.unit.Quit <- true
 			// c.unit = nil
@@ -96,20 +92,20 @@ func (h *Hub) run() {
 			delete(h.uiConnections, c)
 			close(c.send)
 			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
-		case msg := <-h.broadcast:
-			hubLogger.Infof("-> UI %+v", msg)
-			for c := range h.uiConnections {
-				if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.IP)) {
-					select {
-					case c.send <- msg:
-					default:
-						hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
-						//srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
-						close(c.send)
-						delete(h.uiConnections, c)
-					}
-				}
-			}
+			// case msg := <-h.broadcast:
+			// 	hubLogger.Infof("-> UI %+v", msg)
+			// 	for c := range h.uiConnections {
+			// 		if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.IP)) {
+			// 			select {
+			// 			case c.send <- msg.Msg:
+			// 			default:
+			// 				hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
+			// 				//srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
+			// 				close(c.send)
+			// 				delete(h.uiConnections, c)
+			// 			}
+			// 		}
+			// 	}
 		}
 	}
 }
@@ -122,19 +118,16 @@ type uiConn struct {
 	// RFID-unit state-machine:
 	unit *RFIDUnit
 	// Outgoing messages to UI:
-	send chan encapsulatedUIMsg
-	// If ipFilter is an empty string, it means the subscriber wants all messages,
-	// otherwise filter by IP:
-	ipFilter string
+	send chan UIMsg
 }
 
 func (c *uiConn) writer() {
 	for message := range c.send {
-		err := c.ws.WriteJSON(message.Msg)
+		err := c.ws.WriteJSON(message)
 		if err != nil {
 			break
 		}
-		hubLogger.Infof("-> UI[%v] %+v", addr2IP(c.ws.RemoteAddr().String()), message.Msg)
+		hubLogger.Infof("-> UI[%v] %+v", addr2IP(c.ws.RemoteAddr().String()), message)
 	}
 }
 

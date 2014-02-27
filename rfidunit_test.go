@@ -162,13 +162,12 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	}
 	d.outgoing <- []byte("OK\r")
 
-	println("blocking here:")
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
-			Label:  "Heavy metal in Baghdad",
-			OK:     true,
-			Status: "registrert innlevert 26/02/2014",
+			Label: "Heavy metal in Baghdad",
+			OK:    true,
+			Date:  "26/02/2014",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -178,19 +177,20 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
 	// notified with the books title, along with an error message
 	sipPool.Init(1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
-	d.c.Write([]byte("RDT1003010824124004:NO:02030000|1\r"))
+	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	msg = <-d.incoming
 	if string(msg) != "OK\r" {
 		t.Errorf("Alarm was changed after unsuccessful checkin")
 	}
+	d.outgoing <- []byte("OK\r")
 
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:  "Heavy metal in Baghdad",
 			OK:     false,
-			Status: "IKKE innlevert; mangler brikke!",
+			Status: "IKKE innlevert",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)

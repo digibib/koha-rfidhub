@@ -14,7 +14,6 @@ import (
 
 var (
 	cfg        = &config{}
-	srv        *TCPServer
 	sipPool    *ConnPool
 	hub        *Hub
 	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
@@ -48,21 +47,16 @@ func main() {
 	}
 
 	hub = newHub()
-	srv = newTCPServer(cfg)
-	srv.broadcast = hub.broadcast
 
 	// START SERVICES
 
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	sipPool = NewSIPConnPool(cfg.NumSIPConnections)
 
-	logger.Infof("Starting TCP server, listening at port %v", cfg.TCPPort)
-	go srv.run()
-
 	logger.Infof("Starting Websocket hub")
 	go hub.run()
 
-	http.HandleFunc("/", testHandler)
+	//http.HandleFunc("/", testHandler)
 	http.HandleFunc("/ui", uiHandler)
 	http.HandleFunc("/ws", wsHandler)
 

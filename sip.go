@@ -85,6 +85,8 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 		return UIMsg{}, err
 	}
 
+	sipLogger.Infof("-> %v", strings.TrimSpace(req))
+
 	// 2. Read SIP response
 
 	reader := bufio.NewReader(c)
@@ -93,7 +95,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 		return UIMsg{}, err
 	}
 
-	sipLogger.Infof("<- %v", strings.Trim(resp, "\n\r"))
+	sipLogger.Infof("<- %v", strings.TrimSpace(resp))
 
 	// 3. Parse the response
 	res := parser(resp)
@@ -117,6 +119,7 @@ func checkinParse(s string) UIMsg {
 	var (
 		ok     bool
 		status string
+		date   string
 	)
 	if a[2] == '1' {
 		ok = true
@@ -125,23 +128,24 @@ func checkinParse(s string) UIMsg {
 	if a[2] == '0' {
 		status = fields["AF"]
 	} else {
-		status = fmt.Sprintf("registrert innlevert %s/%s/%s", a[12:14], a[10:12], a[6:10])
+		date = fmt.Sprintf("%s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Label: fields["AJ"], Status: status}}
+	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Date: date, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
-		ok     bool
-		status string
+		ok           bool
+		status       string
+		checkoutDate string
 	)
 	fields := pairFieldIDandValue(b)
 	if a[2] == '1' {
 		ok = true
 		date := fields["AH"]
-		status = fmt.Sprintf("utlånt til %s/%s/%s", date[6:8], date[4:6], date[0:4])
+		checkoutDate = fmt.Sprintf("%s/%s/%s", date[6:8], date[4:6], date[0:4])
 	} else {
 		if fields["AF"] == "1" {
 			status = "Failed! Don't know why; SIP should give more information"
@@ -149,7 +153,7 @@ func checkoutParse(s string) UIMsg {
 			status = fields["AF"]
 		}
 	}
-	return UIMsg{Item: item{OK: ok, Status: status, Label: fields["AJ"]}}
+	return UIMsg{Item: item{OK: ok, Date: checkoutDate, Status: status, Label: fields["AJ"]}}
 }
 
 func itemStatusParse(s string) UIMsg {

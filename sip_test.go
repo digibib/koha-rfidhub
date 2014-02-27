@@ -86,7 +86,7 @@ func TestSIPCheckin(t *testing.T) {
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.OK)
 	s.Expect("316 salmer og sanger", res.Item.Label)
-	s.Expect("registrert innlevert 24/01/2014", res.Item.Status)
+	s.Expect("24/01/2014", res.Item.Date)
 
 	p.Init(1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
@@ -103,7 +103,7 @@ func TestSIPCheckout(t *testing.T) {
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.OK)
 	s.Expect("Krutt-Kim", res.Item.Label)
-	s.Expect("utlånt til 21/02/2014", res.Item.Status)
+	s.Expect("21/02/2014", res.Item.Date)
 
 	p.Init(1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckout("2", "1234"), checkoutParse)

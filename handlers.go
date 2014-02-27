@@ -14,19 +14,19 @@ func connectionsToUnits(conns map[string]*RFIDUnit) []string {
 	return res
 }
 
-func testHandler(w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Host  string
-		Units []string
-	}{
-		r.Host,
-		connectionsToUnits(srv.connections),
-	}
-	err := templates.ExecuteTemplate(w, "index.html", data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
+// func testHandler(w http.ResponseWriter, r *http.Request) {
+// 	data := struct {
+// 		Host  string
+// 		Units []string
+// 	}{
+// 		r.Host,
+// 		connectionsToUnits(srv.connections),
+// 	}
+// 	err := templates.ExecuteTemplate(w, "index.html", data)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusInternalServerError)
+// 	}
+// }
 
 func uiHandler(w http.ResponseWriter, r *http.Request) {
 	data := struct {
@@ -52,9 +52,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &uiConn{
-		send:     make(chan encapsulatedUIMsg),
-		ws:       ws,
-		ipFilter: addr2IP(ws.RemoteAddr().String())}
+		send: make(chan UIMsg),
+		ws:   ws}
 
 	hub.uiReg <- c
 	defer func() {

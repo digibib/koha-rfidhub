@@ -8,7 +8,7 @@ import (
 	"github.com/loggo/loggo"
 )
 
-// UnitState represent the current mode of a RFID-unit.
+// UnitState represent the current state of a RFID-unit.
 type UnitState uint8
 
 const (
@@ -30,23 +30,23 @@ type RFIDUnit struct {
 	vendor   Vendor
 	conn     net.Conn
 	FromUI   chan UIMsg
+	ToUI     chan UIMsg
 	FromRFID chan []byte
 	ToRFID   chan []byte
 	Quit     chan bool
-	// Broadcast all events to this channel
-	broadcast chan encapsulatedUIMsg
 }
 
-func newRFIDUnit(c net.Conn) *RFIDUnit {
+func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 	return &RFIDUnit{
 		state:    UNITIdle,
 		dept:     "HUTL",
 		vendor:   newDeichmanVendor(),
 		conn:     c,
 		FromUI:   make(chan UIMsg),
+		ToUI:     send,
 		FromRFID: make(chan []byte),
 		ToRFID:   make(chan []byte),
-		Quit:     make(chan bool),
+		Quit:     make(chan bool, 1),
 	}
 }
 
@@ -71,7 +71,7 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			}
 		case msg := <-u.FromRFID:
-			rfidLogger.Infof("<- RFIDUnit: %v", strings.TrimSpace(string(msg)))
+			rfidLogger.Infof("<- RFIDUnit[%v]", strings.TrimSpace(string(msg)))
 			r, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
@@ -109,22 +109,15 @@ func (u *RFIDUnit) run() {
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
 				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(ip))
-				if r.OK {
-					u.broadcast <- encapsulatedUIMsg{
-						IP:  addr2IP(ip),
-						Msg: currentItem,
-					}
-				} else {
-					currentItem.Item.Status = "IKKE innlevert; mangler brikke!"
+				if !r.OK {
+					currentItem.Item.Status = "IKKE innlevert"
 				}
-
+				u.ToUI <- currentItem
 			case UNITWaitForCheckinAlarmLeave:
 				u.state = UNITCheckin
 				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(ip))
-				u.broadcast <- encapsulatedUIMsg{
-					IP:  addr2IP(ip),
-					Msg: currentItem,
-				}
+				currentItem.Item.Status = "IKKE innlevert"
+				u.ToUI <- currentItem
 			case UNITCheckout:
 				// TODO
 			}
@@ -132,6 +125,7 @@ func (u *RFIDUnit) run() {
 		case <-u.Quit:
 			// cleanup
 			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(ip))
+			u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			close(u.ToRFID)
 			return
 		}
@@ -160,7 +154,7 @@ func (u *RFIDUnit) tcpWriter() {
 			rfidLogger.Warningf(err.Error())
 			break
 		}
-		rfidLogger.Infof("-> RFIDUnit %v %v", u.conn.RemoteAddr().String(), strings.TrimSpace(string(msg)))
+		rfidLogger.Infof("-> RFIDUnit[%v] %v", u.conn.RemoteAddr().String(), strings.TrimSpace(string(msg)))
 		err = w.Flush()
 		if err != nil {
 			rfidLogger.Warningf(err.Error())

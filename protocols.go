@@ -57,8 +57,9 @@ type encapsulatedUIMsg struct {
 
 type item struct {
 	Label  string // [bok] Forfatter - tittel
-	Status string // forfaller 10/03/2013
-	OK     bool   // false = mangler brikke / klarte ikke lese den
+	Date   string // 10/03/2013
+	Status string
+	OK     bool // false = mangler brikke / klarte ikke lese den
 }
 
 type UIMsg struct {
