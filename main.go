@@ -1,7 +1,6 @@
 package main
 
 import (
-	"html/template"
 	"net/http"
 	"os"
 
@@ -13,12 +12,10 @@ import (
 // APPLICATION STATE
 
 var (
-	cfg        = &config{}
-	sipPool    *ConnPool
-	hub        *Hub
-	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
-	logger     = loggo.GetLogger("main")
-	rootLogger = loggo.GetLogger("") // TODO what is this, remove?
+	cfg     = &config{}
+	sipPool *ConnPool
+	hub     *Hub
+	logger  = loggo.GetLogger("main")
 )
 
 // APPLICATION ENTRY POINT
@@ -56,8 +53,6 @@ func main() {
 	logger.Infof("Starting Websocket hub")
 	go hub.run()
 
-	//http.HandleFunc("/", testHandler)
-	http.HandleFunc("/ui", uiHandler)
 	http.HandleFunc("/ws", wsHandler)
 
 	logger.Infof("Starting HTTP server, listening at port %v", cfg.HTTPPort)

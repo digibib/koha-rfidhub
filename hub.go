@@ -92,6 +92,7 @@ func (h *Hub) run() {
 			delete(h.uiConnections, c)
 			close(c.send)
 			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
+			c.unit = nil
 			// case msg := <-h.broadcast:
 			// 	hubLogger.Infof("-> UI %+v", msg)
 			// 	for c := range h.uiConnections {
