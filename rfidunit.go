@@ -125,7 +125,7 @@ func (u *RFIDUnit) run() {
 
 		case <-u.Quit:
 			// cleanup
-			rfidLogger.Infof("Shutting down RFID-unit run(): %v", adr)
+			rfidLogger.Infof("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
 			u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			close(u.ToRFID)
 			return
