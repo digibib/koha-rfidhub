@@ -16,6 +16,9 @@ const (
 	UNITCheckin
 	UNITCheckout
 	UNITWriting
+	UNITWaitForCheckinAlarmOn
+	UNITWaitForCheckinAlarmLeave
+	UNITWaitForCheckoutAlarmOff
 )
 
 var rfidLogger = loggo.GetLogger("rfidunit")
@@ -48,19 +51,21 @@ func newRFIDUnit(c net.Conn) *RFIDUnit {
 }
 
 func (u *RFIDUnit) run() {
+	var currentItem UIMsg
+	var ip = u.conn.RemoteAddr().String()
 	for {
 		select {
 		case uiReq := <-u.FromUI:
 			switch uiReq.Action {
 			case "CHECKIN":
 				u.state = UNITCheckin
-				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(u.conn.RemoteAddr().String()))
+				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(ip))
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "CHECKOUT":
 				u.state = UNITCheckout
-				rfidLogger.Infof("unit %v state CHECKOUT", addr2IP(u.conn.RemoteAddr().String()))
+				rfidLogger.Infof("unit %v state CHECKOUT", addr2IP(ip))
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
@@ -73,52 +78,60 @@ func (u *RFIDUnit) run() {
 				// TODO reset state? UNITIdle & u.vendor.Reset()
 				break
 			}
-			if !r.OK {
-				// send cmdRerad to RFIDunit
-				// TODO
+			switch u.state {
+			case UNITCheckin:
+				if !r.OK {
+					// TODO send cmdRerad to RFIDunit??
 
-				// get status of item, to have title to display on screen,
-				sipRes, err := DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
-				if err != nil {
-					sipLogger.Errorf(err.Error())
-					// TODO give UI error response?
-					break
-				}
-				switch u.state {
-				case UNITCheckin:
-					sipRes.Action = "CHECKIN"
-					sipRes.Item.Status = "IKKE innlevert; mangler brikke!"
-				case UNITCheckout:
-					sipRes.Action = "CHECKOUT"
-					sipRes.Item.Status = "IKKE lånt ut; mangler brikke!"
-				}
-				u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
-				u.broadcast <- encapsulatedUIMsg{
-					IP:  addr2IP(u.conn.RemoteAddr().String()),
-					Msg: sipRes,
-				}
-			} else {
-				// proceed with checkin or checkout transaciton
-				switch u.state {
-				case UNITCheckin:
-					sipRes, err := DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
+					// get status of item, to have title to display on screen,
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
+					if err != nil {
+						sipLogger.Errorf(err.Error())
+						// TODO give UI error response?
+						break
+					}
+					currentItem.Action = "CHECKIN"
+					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
+					u.state = UNITWaitForCheckinAlarmLeave
+					rfidLogger.Infof("unit %v state CHECKINWaitForAlarmLeave", addr2IP(ip))
+				} else {
+					// proceed with checkin or checkout transaciton
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response?
 						break
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
+					u.state = UNITWaitForCheckinAlarmOn
+					rfidLogger.Infof("unit %v state CHECKINWaitForAlarmOn", addr2IP(ip))
+				}
+			case UNITWaitForCheckinAlarmOn:
+				u.state = UNITCheckin
+				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(ip))
+				if r.OK {
 					u.broadcast <- encapsulatedUIMsg{
-						IP:  addr2IP(u.conn.RemoteAddr().String()),
-						Msg: sipRes,
+						IP:  addr2IP(ip),
+						Msg: currentItem,
 					}
+				} else {
+					currentItem.Item.Status = "IKKE innlevert; mangler brikke!"
 				}
 
+			case UNITWaitForCheckinAlarmLeave:
+				u.state = UNITCheckin
+				rfidLogger.Infof("unit %v state CHECKIN", addr2IP(ip))
+				u.broadcast <- encapsulatedUIMsg{
+					IP:  addr2IP(ip),
+					Msg: currentItem,
+				}
+			case UNITCheckout:
+				// TODO
 			}
 
 		case <-u.Quit:
 			// cleanup
-			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(u.conn.RemoteAddr().String()))
+			rfidLogger.Infof("Shutting down RFID-unit run(): %v", addr2IP(ip))
 			close(u.ToRFID)
 			return
 		}

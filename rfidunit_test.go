@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"net"
 	"net/http"
 	"reflect"
@@ -24,6 +25,7 @@ func init() {
 type dummyRFID struct {
 	c        net.Conn
 	incoming chan []byte
+	outgoing chan []byte
 }
 
 func (d *dummyRFID) reader() {
@@ -38,9 +40,26 @@ func (d *dummyRFID) reader() {
 	}
 }
 
+func (d *dummyRFID) writer() {
+	w := bufio.NewWriter(d.c)
+	for msg := range d.outgoing {
+		_, err := w.Write(msg)
+		if err != nil {
+			panic(err)
+			break
+		}
+		err = w.Flush()
+		if err != nil {
+			panic(err)
+			break
+		}
+	}
+}
+
 func newDummyRFID() *dummyRFID {
 	return &dummyRFID{
 		incoming: make(chan []byte),
+		outgoing: make(chan []byte),
 	}
 }
 
@@ -55,52 +74,76 @@ func newDummyUIAgent() *dummyUIAgent {
 func TestRFIDUnitStateMachine(t *testing.T) {
 
 	// SETUP//////////////////////////////////////////////////////////////////
+	cfg = &config{TCPPort: "6005"}
 	sipPool = NewSIPConnPool(0)
+	uiChan := make(chan UIMsg)
+	hub = newHub()
 
-	// Start tcp server
-	cfg := &config{TCPPort: "7777"}
-	srv = newTCPServer(cfg)
-	uiChan := make(chan encapsulatedUIMsg, 10)
-	srv.broadcast = uiChan
-	go srv.run()
+	var d = newDummyRFID()
+	// Start the dummy RFID tcp server
+	go func(d *dummyRFID) {
+		ln, err := net.Listen("tcp", "127.0.0.1:"+cfg.TCPPort)
+		if err != nil {
+			panic("Cannot start dummy RFID TCP-server")
+		}
+		defer ln.Close()
+		c, err := ln.Accept()
+		if err != nil {
+			println(err.Error())
+			panic("cannot accept tcp connection")
+		}
+		d.c = c
+		go d.writer()
+		d.reader()
+	}(d)
+
+	time.Sleep(10 * time.Millisecond)
 
 	// Start http server and websocket hub
-	hub = newHub()
 	go hub.run()
 	http.HandleFunc("/ws", wsHandler)
-	go http.ListenAndServe("localhost:8888", nil)
+	go http.ListenAndServe("127.0.0.1:8888", nil)
 
-	// Wait til all services are running
 	time.Sleep(100 * time.Millisecond)
-
-	// Connect with simluated rfid-unit
-	d := newDummyRFID()
-	c, err := net.Dial("tcp", "localhost:7777")
-	if err != nil {
-		t.Fatal("Cannot connect to TCP server, localhost:7777")
-	}
-	d.c = c
-	go d.reader()
 
 	// Connect dummy UI agent
 	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://localhost:8888/ws", nil)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
 	if err != nil {
-		t.Fatal("Cannot get ws connection to localhost:8888/ws")
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
 	}
 	a.c = ws
+	go func(c chan UIMsg) {
+		for {
+			_, msg, err := a.c.ReadMessage()
+			if err != nil {
+				break
+			}
+			var m UIMsg
+			err = json.Unmarshal(msg, &m)
+			if err != nil {
+				break
+			}
+			c <- m
+		}
+	}(uiChan)
 
-	if addr2IP(d.c.RemoteAddr().String()) != addr2IP(a.c.RemoteAddr().String()) {
-		t.Fatal("RFID-unit and websocket connection has different IPs")
-	}
+	time.Sleep(100 * time.Millisecond)
 
 	// TESTS /////////////////////////////////////////////////////////////////
 
-	// Send "CHECKIN" message from UI and verify that the RFID-unit gets
-	// instructed to starts scanning for tags.
+	// Send "CHECKIN" message from UI and verify that the UI gets notified of
+	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
 	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	uiMsg := <-uiChan
+	want := UIMsg{Action: "CONNECT"}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get notified of succesfull rfid connect")
 	}
 
 	msg := <-d.incoming
@@ -111,22 +154,24 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
 	// SIP, the Alarm turned on, and that UI get's notified of the transaction
 	sipPool.Init(1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|AA2|CS927.8|\r"))
-	d.c.Write([]byte("RDT1003010824124004:NO:02030000|0\r"))
+	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|0\r")
 
 	msg = <-d.incoming
 	if string(msg) != "OK1\r" {
 		t.Errorf("Alarm didnt get turn on after checkin")
 	}
+	d.outgoing <- []byte("OK\r")
 
-	uiMsg := <-uiChan
-	want := UIMsg{Action: "CHECKIN",
+	println("blocking here:")
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:  "Heavy metal in Baghdad",
 			OK:     true,
 			Status: "registrert innlevert 26/02/2014",
 		}}
-	if !reflect.DeepEqual(uiMsg.Msg, want) {
-		t.Errorf("Got %+v; want %+v", uiMsg.Msg, want)
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
 		t.Fatal("UI didn't get the correct message after checkin")
 	}
 
@@ -147,8 +192,8 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 			OK:     false,
 			Status: "IKKE innlevert; mangler brikke!",
 		}}
-	if !reflect.DeepEqual(uiMsg.Msg, want) {
-		t.Errorf("Got %+v; want %+v", uiMsg.Msg, want)
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
 		t.Fatal("UI didn't get the correct message when item is missing tags")
 	}
 

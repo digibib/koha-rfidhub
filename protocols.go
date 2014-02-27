@@ -62,8 +62,9 @@ type item struct {
 }
 
 type UIMsg struct {
-	Action string // CHECKIN/CHECKOUT/ERROR
-	Item   item
+	Action    string // CHECKIN/CHECKOUT/ERROR
+	RFIDError bool
+	Item      item
 }
 
 func ErrorResponse(ip string, errMsg error) encapsulatedUIMsg {
