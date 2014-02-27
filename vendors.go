@@ -76,14 +76,13 @@ func (v *deichmanVendor) ParseRFIDResp(r []byte) (RFIDResp, error) {
 			if v.WriteMode {
 				// Ex: OK|E004010046A847AD|E004010046A847AD
 				return RFIDResp{OK: true, WrittenIDs: b[1:len(b)]}, nil
-			} else {
-				// Ex: OK|2
-				i, err := strconv.Atoi(b[1])
-				if err != nil {
-					break
-				}
-				return RFIDResp{OK: true, TagCount: i}, nil
 			}
+			// Ex: OK|2
+			i, err := strconv.Atoi(b[1])
+			if err != nil {
+				break
+			}
+			return RFIDResp{OK: true, TagCount: i}, nil
 		}
 		if s[0:3] == "RDT" {
 			b := strings.Split(s[3:l], "|")

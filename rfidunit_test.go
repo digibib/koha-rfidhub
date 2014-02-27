@@ -45,12 +45,12 @@ func (d *dummyRFID) writer() {
 	for msg := range d.outgoing {
 		_, err := w.Write(msg)
 		if err != nil {
-			panic(err)
+			println(err)
 			break
 		}
 		err = w.Flush()
 		if err != nil {
-			panic(err)
+			println(err)
 			break
 		}
 	}

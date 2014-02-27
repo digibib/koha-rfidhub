@@ -20,7 +20,8 @@ type ConnPool struct {
 	conn chan net.Conn
 }
 
-// InitFunction
+// InitFunction is the function to initalize a connection before adding it to
+// the pool.
 type InitFunction func(interface{}) (net.Conn, error)
 
 func initSIPConn(i interface{}) (net.Conn, error) {
@@ -69,19 +70,19 @@ func (p *ConnPool) Init(size int, initFn InitFunction) {
 	p.size = count
 }
 
-// NewSIPCOnnPool creates a new pool with <size> SIP connections
+// NewSIPConnPool creates a new pool with <size> SIP connections.
 func NewSIPConnPool(size int) *ConnPool {
 	p := &ConnPool{}
 	p.Init(size, initSIPConn)
 	return p
 }
 
-// Get a connection from the pool
+// Get a connection from the pool.
 func (p *ConnPool) Get() net.Conn {
 	return <-p.conn
 }
 
-// Release returns the connection back to the pool
+// Release returns the connection back to the pool.
 func (p *ConnPool) Release(c net.Conn) {
 	p.conn <- c
 }

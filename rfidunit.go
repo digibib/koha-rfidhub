@@ -11,6 +11,7 @@ import (
 // UnitState represent the current state of a RFID-unit.
 type UnitState uint8
 
+// Possible states of the RFID-unit state-machine:
 const (
 	UNITIdle UnitState = iota
 	UNITCheckin

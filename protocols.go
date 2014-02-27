@@ -55,6 +55,7 @@ type item struct {
 	OK     bool // false = mangler brikke / klarte ikke lese den
 }
 
+// UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
 	Action    string // CHECKIN/CHECKOUT/ERROR
 	RFIDError bool
