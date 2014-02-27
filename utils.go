@@ -10,7 +10,3 @@ func addr2IP(addr string) string {
 	}
 	return addr[0:i]
 }
-
-func sameIP(a, b string) bool {
-	return a == b
-}

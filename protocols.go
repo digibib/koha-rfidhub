@@ -48,13 +48,6 @@ type RFIDResp struct {
 // UI message protocol ////////////////////////////////////////////////////////
 // For communication between Koha's web intranet interface and the RFID-hub.
 
-type encapsulatedUIMsg struct {
-	IP           string
-	Error        string
-	ErrorDetails string
-	Msg          UIMsg
-}
-
 type item struct {
 	Label  string // [bok] Forfatter - tittel
 	Date   string // 10/03/2013
@@ -66,13 +59,4 @@ type UIMsg struct {
 	Action    string // CHECKIN/CHECKOUT/ERROR
 	RFIDError bool
 	Item      item
-}
-
-func ErrorResponse(ip string, errMsg error) encapsulatedUIMsg {
-	return encapsulatedUIMsg{
-		IP:           ip,
-		Msg:          UIMsg{Action: "ERROR"},
-		Error:        "Noe gikk galt, det er ikke din feil!",
-		ErrorDetails: errMsg.Error(),
-	}
 }

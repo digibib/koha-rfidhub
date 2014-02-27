@@ -15,8 +15,8 @@ run:
 	@go run main.go handlers.go config.go rfidunit.go hub.go protocols.go utils.go pool.go sip.go vendors.go --race
 
 todo:
-	@grep -rn TODO * || true
-	@grep -rn println * || true
+	@grep -rn TODO *.go || true
+	@grep -rn println *.go || true
 
 test:
 	@go test -i

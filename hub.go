@@ -24,8 +24,6 @@ type Hub struct {
 	uiUnReg chan *uiConn
 	// Notify of lost TCP connection to RFID
 	tcpLost chan *uiConn
-	// Broadcast to all connected UIs (or optionally filtered by IP):
-	broadcast chan encapsulatedUIMsg
 }
 
 // newHub creates and returns a new Hub instance.
@@ -35,7 +33,6 @@ func newHub() *Hub {
 		uiReg:         make(chan *uiConn),
 		uiUnReg:       make(chan *uiConn),
 		tcpLost:       make(chan *uiConn),
-		broadcast:     make(chan encapsulatedUIMsg),
 	}
 }
 
@@ -44,6 +41,7 @@ func (h *Hub) run() {
 	for {
 		select {
 		case c := <-h.uiReg:
+			// TODO check if connnection allready exist from that IP
 			h.uiConnections[c] = true
 
 			var ip = addr2IP(c.ws.RemoteAddr().String())
@@ -52,8 +50,7 @@ func (h *Hub) run() {
 			// Try to create a TCP connection to RFID-unit:
 			conn, err := net.Dial("tcp", ip+":"+cfg.TCPPort)
 			if err != nil {
-				println(err.Error())
-				hubLogger.Warningf("RFID-unit[%v:%v] connection failed", ip, cfg.TCPPort)
+				hubLogger.Warningf("RFID-unit[%v:%v] connection failed: %v", ip, cfg.TCPPort, err.Error())
 				// Note that the Hub never retries to connect after failure.
 				// The User must refresh the UI page to try to establish the
 				// RFID TCP connection again.
