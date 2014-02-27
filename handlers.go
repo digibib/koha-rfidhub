@@ -56,9 +56,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		ws:       ws,
 		ipFilter: addr2IP(ws.RemoteAddr().String())}
 
-	uiHub.uiReg <- c
+	hub.uiReg <- c
 	defer func() {
-		uiHub.uiUnReg <- c
+		hub.uiUnReg <- c
 	}()
 	go c.writer()
 	c.reader()

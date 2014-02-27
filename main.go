@@ -16,7 +16,7 @@ var (
 	cfg        = &config{}
 	srv        *TCPServer
 	sipPool    *ConnPool
-	uiHub      *wsHub
+	hub        *Hub
 	templates  = template.Must(template.ParseFiles("index.html", "uitest.html"))
 	logger     = loggo.GetLogger("main")
 	rootLogger = loggo.GetLogger("") // TODO what is this, remove?
@@ -47,9 +47,9 @@ func main() {
 		}
 	}
 
-	uiHub = newHub()
+	hub = newHub()
 	srv = newTCPServer(cfg)
-	srv.broadcast = uiHub.broadcast
+	srv.broadcast = hub.broadcast
 
 	// START SERVICES
 
@@ -60,7 +60,7 @@ func main() {
 	go srv.run()
 
 	logger.Infof("Starting Websocket hub")
-	go uiHub.run()
+	go hub.run()
 
 	http.HandleFunc("/", testHandler)
 	http.HandleFunc("/ui", uiHandler)

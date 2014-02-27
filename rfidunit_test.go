@@ -65,8 +65,8 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	go srv.run()
 
 	// Start http server and websocket hub
-	uiHub = newHub()
-	go uiHub.run()
+	hub = newHub()
+	go hub.run()
 	http.HandleFunc("/ws", wsHandler)
 	go http.ListenAndServe("localhost:8888", nil)
 
