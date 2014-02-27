@@ -29,7 +29,7 @@ func main() {
 	err := cfg.fromFile("config.json")
 	if err != nil {
 		cfg = &config{
-			TCPPort:           "6767",
+			TCPPort:           "6005",
 			HTTPPort:          "8899",
 			SIPServer:         "wombat:6001",
 			NumSIPConnections: 5,
