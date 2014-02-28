@@ -50,10 +50,11 @@ type RFIDResp struct {
 // For communication between Koha's web intranet interface and the RFID-hub.
 
 type item struct {
-	Label  string // [bok] Forfatter - tittel
-	Date   string // 10/03/2013
-	Status string
-	OK     bool // false = mangler brikke / klarte ikke lese den
+	Label   string // [bok] Forfatter - tittel
+	Date    string // 10/03/2013
+	Status  string
+	Unknown bool // true if SIP server cant give any information
+	OK      bool // false = mangler brikke / klarte ikke lese den
 }
 
 // UIMsg is a message to or from Koha's user interface.

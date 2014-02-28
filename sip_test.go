@@ -61,9 +61,9 @@ func FailingSIPResponse() func(i interface{}) (net.Conn, error) {
 func TestFieldPairs(t *testing.T) {
 	s := specs.New(t)
 
-	fields := pairFieldIDandValue("AOHUTL|AA2|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|AFGreetings from Koha. |\r")
+	fields := pairFieldIDandValue("AOHUTL|AA2|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|ZZ|AFGreetings from Koha. |\r")
 	tests := []specs.Spec{
-		{9, len(fields)},
+		{10, len(fields)},
 		{"HUTL", fields["AO"]},
 		{"2", fields["AA"]},
 		{"Fillip Wahl", fields["AE"]},
@@ -72,6 +72,7 @@ func TestFieldPairs(t *testing.T) {
 		{"5", fields["CC"]},
 		{"PT", fields["PC"]},
 		{"Y", fields["PI"]},
+		{"", fields["ZZ"]},
 		{"Greetings from Koha. ", fields["AF"]},
 	}
 	s.ExpectAll(tests)
@@ -136,4 +137,11 @@ func TestSIPItemStatus(t *testing.T) {
 	s.ExpectNil(err)
 	s.Expect(false, res.Item.OK)
 	s.Expect("Heavy metal in Baghdad", res.Item.Label)
+
+	p.Init(1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r"))
+	res, err = DoSIPCall(p, sipFormMsgItemStatus("1003010856677001"), itemStatusParse)
+
+	s.ExpectNil(err)
+	s.Expect(false, res.Item.OK)
+	s.Expect(true, res.Item.Unknown)
 }
