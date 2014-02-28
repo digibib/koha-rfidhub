@@ -10,6 +10,8 @@ func TestDeichmanGenerateRFIDRequest(t *testing.T) {
 		in  RFIDReq
 		out string
 	}{
+
+		{RFIDReq{Cmd: cmdInitVersion}, "VER2.00\r"},
 		{RFIDReq{Cmd: cmdBeginScan}, "BEG\r"},
 		{RFIDReq{Cmd: cmdEndScan}, "END\r"},
 		{RFIDReq{Cmd: cmdRereadTag}, "OKR\r"},

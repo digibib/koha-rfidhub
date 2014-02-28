@@ -21,14 +21,15 @@ type Vendor interface {
 type RFIDCommand uint8
 
 const (
-	cmdBeginScan  RFIDCommand = iota // BEG
-	cmdEndScan                       // END
-	cmdRereadTag                     // OKR
-	cmdAlarmOn                       // OK1
-	cmdAlarmOff                      // OK0
-	cmdAlarmLeave                    // OK (leave alarm in its current state)
-	cmdTagCount                      // TGC
-	cmdWrite                         // WRT
+	cmdInitVersion RFIDCommand = iota // VER2
+	cmdBeginScan                      // BEG
+	cmdEndScan                        // END
+	cmdRereadTag                      // OKR
+	cmdAlarmOn                        // OK1
+	cmdAlarmOff                       // OK0
+	cmdAlarmLeave                     // OK (leave alarm in its current state)
+	cmdTagCount                       // TGC
+	cmdWrite                          // WRT
 )
 
 // RFIDReq represents request to be sent to the RFID-unit.

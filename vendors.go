@@ -25,6 +25,8 @@ func (v *deichmanVendor) Reset() {
 
 func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 	switch r.Cmd {
+	case cmdInitVersion:
+		return []byte("VER2.00\r")
 	case cmdBeginScan:
 		return []byte("BEG\r")
 	case cmdEndScan:
@@ -49,7 +51,9 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 		b.Write([]byte("|0\r"))
 		return b.Bytes()
 	}
-	return nil
+
+	// This can never be reached, given all cases of r.Cmd are covered above:
+	return []byte("OK\r")
 }
 
 // ParseRFIDResp parses the RFID response.
