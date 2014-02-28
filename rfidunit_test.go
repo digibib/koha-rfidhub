@@ -203,6 +203,9 @@ func TestCheckins(t *testing.T) {
 		t.Fatal("UI -> CHECKIN: RFID-unit didn't get instructed to start scanning")
 	}
 
+	// acknowledge BEG command
+	d.outgoing <- []byte("OK\r")
+
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
 	// SIP, the Alarm turned on, and that UI get's notified of the transaction
 	sipPool.Init(1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|AA2|CS927.8|\r"))

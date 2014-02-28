@@ -14,6 +14,7 @@ type UnitState uint8
 // Possible states of the RFID-unit state-machine:
 const (
 	UNITIdle UnitState = iota
+	UNITCheckinWaitForBegOK
 	UNITCheckin
 	UNITCheckout
 	UNITWriting
@@ -59,7 +60,7 @@ func (u *RFIDUnit) run() {
 		case uiReq := <-u.FromUI:
 			switch uiReq.Action {
 			case "CHECKIN":
-				u.state = UNITCheckin
+				u.state = UNITCheckinWaitForBegOK
 				rfidLogger.Infof("unit %v state CHECKIN", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
@@ -80,6 +81,12 @@ func (u *RFIDUnit) run() {
 				break
 			}
 			switch u.state {
+			case UNITCheckinWaitForBegOK:
+				if !r.OK {
+					// TODO handle this
+					// quit?
+				}
+				u.state = UNITCheckin
 			case UNITCheckin:
 				if !r.OK {
 					// TODO send cmdRerad to RFIDunit??
