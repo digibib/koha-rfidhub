@@ -4,6 +4,7 @@ all:
 	@make todo
 
 build:
+	@go get -u ./...
 	@export GOBIN=$(shell pwd)
 	@go build
 
