@@ -48,6 +48,13 @@ func (h *Hub) run() {
 			var ip = addr2IP(c.ws.RemoteAddr().String())
 			hubLogger.Infof("UI[%v] connected", ip)
 
+			// Fail if we don't have any SIP connections in the pool
+			if sipPool.Size() == 0 {
+				c.send <- UIMsg{Action: "CONNECT", SIPError: true}
+				hubLogger.Warningf("Cannot start State-machine for %v: SIP pool is empty", ip)
+				break
+			}
+
 			// Try to create a TCP connection to RFID-unit:
 			conn, err := net.Dial("tcp", ip+":"+cfg.TCPPort)
 			if err != nil {

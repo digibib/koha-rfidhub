@@ -52,6 +52,7 @@ func (d *dummyRFID) writer() {
 func (d *dummyRFID) run() {
 	ln, err := net.Listen("tcp", "127.0.0.1:"+cfg.TCPPort)
 	if err != nil {
+		println(err.Error())
 		panic("Cannot start dummy RFID TCP-server")
 	}
 	defer ln.Close()
@@ -111,6 +112,7 @@ func init() {
 }
 
 func TestMissingRFIDUnit(t *testing.T) {
+	sipPool.Init(1, FailingSIPResponse())
 	a := newDummyUIAgent()
 	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
 	if err != nil {
@@ -130,6 +132,7 @@ func TestMissingRFIDUnit(t *testing.T) {
 }
 
 func TestRFIDUnitInitVersionFailure(t *testing.T) {
+	sipPool.Init(1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
 
@@ -160,6 +163,7 @@ func TestRFIDUnitInitVersionFailure(t *testing.T) {
 }
 
 func TestUnavailableSIPServer(t *testing.T) {
+	sipPool.Init(1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
 	a := newDummyUIAgent()
@@ -185,7 +189,6 @@ func TestUnavailableSIPServer(t *testing.T) {
 		t.Fatal("UI -> CHECKIN: RFID-unit didn't get instructed to start scanning")
 	}
 	d.outgoing <- []byte("OK\r")
-	sipPool.Init(1, FailingSIPResponse())
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	uiMsg := <-uiChan
@@ -195,17 +198,33 @@ func TestUnavailableSIPServer(t *testing.T) {
 		t.Fatal("UI didn't get notified of SIP error")
 	}
 
-	// msg = <-d.incoming
-	// if string(msg) != "OK\r" {
-	// 	t.Errorf("Alarm was changed after unsuccessful checkin")
-	// }
-	// d.outgoing <- []byte("OK\r")
-
 	a.c.Close()
 	d.c.Close()
 }
 
+func TestEmptySIPConnPool(t *testing.T) {
+	sipPool.Init(0, FailingSIPResponse())
+
+	a := newDummyUIAgent()
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+	if err != nil {
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+	}
+	a.c = ws
+	go a.run(uiChan)
+
+	uiMsg := <-uiChan
+
+	want := UIMsg{Action: "CONNECT", SIPError: true}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Errorf("UI didn't get SIP error when SIP pool is empty")
+	}
+	a.c.Close()
+}
+
 func TestCheckins(t *testing.T) {
+	sipPool.Init(1, FailingSIPResponse())
 
 	// Create & start the dummy RFID tcp server
 	var d = newDummyRFID()

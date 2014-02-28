@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 )
 
 // TODO monitoring? what if a connection is lost? how to detect?
@@ -16,6 +17,7 @@ import (
 
 // ConnPool keeps a pool of <size> TCP connections
 type ConnPool struct {
+	sync.RWMutex
 	size int
 	conn chan net.Conn
 }
@@ -59,6 +61,8 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 func (p *ConnPool) Init(size int, initFn InitFunction) {
 	p.conn = make(chan net.Conn, size)
 	var count = 0
+	p.Lock()
+	defer p.Unlock()
 	for i := 1; i <= size; i++ {
 		conn, err := initFn(i)
 		if err != nil {
@@ -85,4 +89,11 @@ func (p *ConnPool) Get() net.Conn {
 // Release returns the connection back to the pool.
 func (p *ConnPool) Release(c net.Conn) {
 	p.conn <- c
+}
+
+// Size returns the number of connections currently in the pool.
+func (p *ConnPool) Size() int {
+	p.RLock()
+	defer p.RUnlock()
+	return p.size
 }
