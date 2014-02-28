@@ -61,7 +61,7 @@ func (u *RFIDUnit) run() {
 			switch uiReq.Action {
 			case "CHECKIN":
 				u.state = UNITCheckinWaitForBegOK
-				rfidLogger.Infof("unit %v state CHECKIN", adr)
+				rfidLogger.Infof("[%v] UNITCheckinWaitForBegOK", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
@@ -87,6 +87,7 @@ func (u *RFIDUnit) run() {
 					// quit?
 				}
 				u.state = UNITCheckin
+				rfidLogger.Infof("[%v] UNITCheckin", adr)
 			case UNITCheckin:
 				if !r.OK {
 					// TODO send cmdRerad to RFIDunit??
@@ -101,7 +102,7 @@ func (u *RFIDUnit) run() {
 					currentItem.Action = "CHECKIN"
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 					u.state = UNITWaitForCheckinAlarmLeave
-					rfidLogger.Infof("unit %v state CHECKINWaitForAlarmLeave", adr)
+					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
 					// proceed with checkin or checkout transaciton
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
@@ -112,18 +113,18 @@ func (u *RFIDUnit) run() {
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
-					rfidLogger.Infof("unit %v state CHECKINWaitForAlarmOn", adr)
+					rfidLogger.Infof("[%v] UNITCheckinNWaitForAlarmOn", adr)
 				}
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
-				rfidLogger.Infof("unit %v state CHECKIN", adr)
+				rfidLogger.Infof("[%v] UNITCheckin", adr)
 				if !r.OK {
 					currentItem.Item.Status = "IKKE innlevert"
 				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckinAlarmLeave:
 				u.state = UNITCheckin
-				rfidLogger.Infof("unit %v state CHECKIN", adr)
+				rfidLogger.Infof("[%v] UNITCheckin", adr)
 				currentItem.Item.Status = "IKKE innlevert"
 				u.ToUI <- currentItem
 			case UNITCheckout:
