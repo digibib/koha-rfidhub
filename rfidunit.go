@@ -96,7 +96,8 @@ func (u *RFIDUnit) run() {
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
-						// TODO give UI error response?
+						u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
+						u.Quit <- true
 						break
 					}
 					currentItem.Action = "CHECKIN"
@@ -149,9 +150,7 @@ func (u *RFIDUnit) tcpReader() {
 	for {
 		msg, err := r.ReadBytes('\r')
 		if err != nil {
-			//u.Quit <- true
-			println(err.Error())
-			//rfidLogger.Warningf("[%v] cannot read from socket: %v", addr2IP(u.conn.RemoteAddr().String()), cfg.TCPPort, err.Error())
+			// println(err.Error()) = EOF
 			break
 		}
 		u.FromRFID <- msg

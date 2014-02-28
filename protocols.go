@@ -60,5 +60,6 @@ type item struct {
 type UIMsg struct {
 	Action    string // CHECKIN/CHECKOUT/ERROR
 	RFIDError bool
+	SIPError  bool
 	Item      item
 }
