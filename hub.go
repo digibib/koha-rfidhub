@@ -116,6 +116,7 @@ func (h *Hub) run() {
 			// TODO I shouldnt have to do this; but got panic because
 			//      "close of closed channel" on some occations.
 			if _, ok := h.uiConnections[c]; !ok {
+				println("TODO FIXME connection allready gone!")
 				break
 			}
 			// Shutdown RFID-unit state-machine if it exists:
