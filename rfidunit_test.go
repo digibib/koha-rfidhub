@@ -129,6 +129,36 @@ func TestMissingRFIDUnit(t *testing.T) {
 	a.c.Close()
 }
 
+func TestRFIDUnitInitVersionFailure(t *testing.T) {
+	var d = newDummyRFID()
+	go d.run()
+
+	a := newDummyUIAgent()
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+	if err != nil {
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+	}
+	a.c = ws
+	go a.run(uiChan)
+
+	msg := <-d.incoming
+	if string(msg) != "VER2.00\r" {
+		t.Fatal("RFID-unit didn't get version init command")
+	}
+
+	d.outgoing <- []byte("NOK\r")
+
+	uiMsg := <-uiChan
+	want := UIMsg{Action: "CONNECT", RFIDError: true}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get notified of failed RFID connect")
+	}
+
+	a.c.Close()
+	d.c.Close()
+}
+
 func TestCheckins(t *testing.T) {
 
 	// Create & start the dummy RFID tcp server
@@ -146,6 +176,13 @@ func TestCheckins(t *testing.T) {
 
 	// TESTS /////////////////////////////////////////////////////////////////
 
+	msg := <-d.incoming
+	if string(msg) != "VER2.00\r" {
+		t.Fatal("RFID-unit didn't get version init command")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
 	// Verify that UI get's CONNECT message
 	uiMsg := <-uiChan
 	want := UIMsg{Action: "CONNECT"}
@@ -161,7 +198,7 @@ func TestCheckins(t *testing.T) {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
 
-	msg := <-d.incoming
+	msg = <-d.incoming
 	if string(msg) != "BEG\r" {
 		t.Fatal("UI -> CHECKIN: RFID-unit didn't get instructed to start scanning")
 	}

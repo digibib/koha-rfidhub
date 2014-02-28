@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"net"
 
@@ -54,15 +55,44 @@ func (h *Hub) run() {
 				// Note that the Hub never retries to connect after failure.
 				// The User must refresh the UI page to try to establish the
 				// RFID TCP connection again.
-				// Notify UI of failure to connect to RFID-unit:
 				c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
 				break
 			}
 
-			hubLogger.Infof("RFID-unit[%v:%v] connected", ip, cfg.TCPPort)
-
-			// Initialize the RFID-unit state-machine with the TCP connection:
+			// Init the RFID-unit with version command
+			var initError string
 			unit := newRFIDUnit(conn, c.send)
+			req := unit.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdInitVersion})
+			_, err = conn.Write(req)
+			if err != nil {
+				initError = err.Error()
+			}
+			hubLogger.Infof("-> RFID-unit[%v:%v] %q", ip, cfg.TCPPort, req)
+
+			rdr := bufio.NewReader(conn)
+			msg, err := rdr.ReadBytes('\r')
+			if err != nil {
+				initError = err.Error()
+			}
+			r, err := unit.vendor.ParseRFIDResp(msg)
+			if err != nil {
+				initError = err.Error()
+			}
+			hubLogger.Infof("<- RFID-unit[%v:%v] %q", ip, cfg.TCPPort, msg)
+
+			if !r.OK {
+				initError = "RFID-unit responded with NOK"
+			}
+
+			if initError != "" {
+				hubLogger.Errorf("RFID-unit[%v:%v] initialization failed: %v", ip, cfg.TCPPort, initError)
+				c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
+				unit = nil
+				break
+			}
+
+			hubLogger.Infof("RFID-unit[%v:%v] connected & initialized", ip, cfg.TCPPort)
+			// Initialize the RFID-unit state-machine with the TCP connection:
 			c.unit = unit
 			go unit.run()
 			go unit.tcpWriter()
