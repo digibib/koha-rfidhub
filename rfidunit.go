@@ -150,6 +150,7 @@ func (u *RFIDUnit) tcpReader() {
 		msg, err := r.ReadBytes('\r')
 		if err != nil {
 			//u.Quit <- true
+			println(err.Error())
 			//rfidLogger.Warningf("[%v] cannot read from socket: %v", addr2IP(u.conn.RemoteAddr().String()), cfg.TCPPort, err.Error())
 			break
 		}

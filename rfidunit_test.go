@@ -159,6 +159,10 @@ func TestRFIDUnitInitVersionFailure(t *testing.T) {
 	d.c.Close()
 }
 
+func TestUnavailableSIPServer(t *testing.T) {
+	// TODO
+}
+
 func TestCheckins(t *testing.T) {
 
 	// Create & start the dummy RFID tcp server
