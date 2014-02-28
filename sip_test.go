@@ -112,3 +112,14 @@ func TestSIPCheckout(t *testing.T) {
 	s.Expect(false, res.Item.OK)
 	s.Expect("Invalid Item", res.Item.Status)
 }
+
+func TestSIPItemStatus(t *testing.T) {
+	s := specs.New(t)
+	p := &ConnPool{}
+	p.Init(1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	res, err := DoSIPCall(p, sipFormMsgItemStatus("03010824124004"), itemStatusParse)
+
+	s.ExpectNil(err)
+	s.Expect(false, res.Item.OK)
+	s.Expect("Heavy metal in Baghdad", res.Item.Label)
+}
