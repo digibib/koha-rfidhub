@@ -133,9 +133,11 @@ func (u *RFIDUnit) run() {
 
 		case <-u.Quit:
 			// cleanup
-			rfidLogger.Infof("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
-			u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			close(u.ToRFID)
+			rfidLogger.Infof("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
+			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
+			rfidLogger.Infof("Closing TCP connection")
+			u.conn.Close()
 			return
 		}
 	}
@@ -147,7 +149,8 @@ func (u *RFIDUnit) tcpReader() {
 	for {
 		msg, err := r.ReadBytes('\r')
 		if err != nil {
-			u.Quit <- true
+			//u.Quit <- true
+			//rfidLogger.Warningf("[%v] cannot read from socket: %v", addr2IP(u.conn.RemoteAddr().String()), cfg.TCPPort, err.Error())
 			break
 		}
 		u.FromRFID <- msg
