@@ -136,7 +136,7 @@ func (u *RFIDUnit) run() {
 			close(u.ToRFID)
 			rfidLogger.Infof("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
 			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
-			rfidLogger.Infof("Closing TCP connection")
+			rfidLogger.Infof("Closing TCP connection to %v", adr)
 			u.conn.Close()
 			return
 		}
