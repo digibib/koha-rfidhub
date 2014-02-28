@@ -129,7 +129,7 @@ func TestMissingRFIDUnit(t *testing.T) {
 	a.c.Close()
 }
 
-func TestRFIDUnitStateMachine(t *testing.T) {
+func TestCheckins(t *testing.T) {
 
 	// Create & start the dummy RFID tcp server
 	var d = newDummyRFID()
@@ -143,8 +143,6 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	}
 	a.c = ws
 	go a.run(uiChan)
-
-	time.Sleep(100 * time.Millisecond)
 
 	// TESTS /////////////////////////////////////////////////////////////////
 
@@ -214,12 +212,6 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 		t.Fatal("UI didn't get the correct message when item is missing tags")
 	}
 
-	// Test successfull checkout
-	// TODO
-
-	// Test unsucsessfull checkout
-	// TODO
-
 	// Verify that the RFID-unit gets END message when the corresponding
 	// websocket connection is closed.
 	a.c.Close()
@@ -232,5 +224,25 @@ func TestRFIDUnitStateMachine(t *testing.T) {
 	// Disconnect RFIDUnit
 	d.c.Close()
 	time.Sleep(10 * time.Millisecond)
-	// TODO verify what?
 }
+
+/*
+func TestCheckouts(t *testing.T) {
+	// Create & start the dummy RFID tcp server
+	var d = newDummyRFID()
+	go d.run()
+
+	// Connect dummy UI agent
+	a := newDummyUIAgent()
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+	if err != nil {
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+	}
+	a.c = ws
+	go a.run(uiChan)
+
+	time.Sleep(100 * time.Millisecond)
+
+	// TESTS /////////////////////////////////////////////////////////////////
+}
+*/
