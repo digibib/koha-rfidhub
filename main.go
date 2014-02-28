@@ -29,7 +29,7 @@ func main() {
 			HTTPPort:          "8899",
 			SIPServer:         "wombat:6001",
 			NumSIPConnections: 5,
-			LogLevels:         "<root>=WARNING;tcp=INFO;ws=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
+			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
 		logger.Warningf("No config.json file found, using standard values")
 	}
