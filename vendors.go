@@ -32,7 +32,7 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 	case cmdEndScan:
 		return []byte("END\r")
 	case cmdAlarmLeave:
-		return []byte("OK\r")
+		return []byte("OK \r")
 	case cmdAlarmOff:
 		return []byte("OK0\r")
 	case cmdAlarmOn:

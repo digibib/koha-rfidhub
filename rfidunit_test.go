@@ -300,7 +300,7 @@ func TestCheckins(t *testing.T) {
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	msg = <-d.incoming
-	if string(msg) != "OK\r" {
+	if string(msg) != "OK \r" {
 		t.Errorf("Alarm was changed after unsuccessful checkin")
 	}
 	d.outgoing <- []byte("OK\r")

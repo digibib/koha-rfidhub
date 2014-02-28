@@ -17,7 +17,7 @@ func TestDeichmanGenerateRFIDRequest(t *testing.T) {
 		{RFIDReq{Cmd: cmdRereadTag}, "OKR\r"},
 		{RFIDReq{Cmd: cmdAlarmOff}, "OK0\r"},
 		{RFIDReq{Cmd: cmdAlarmOn}, "OK1\r"},
-		{RFIDReq{Cmd: cmdAlarmLeave}, "OK\r"},
+		{RFIDReq{Cmd: cmdAlarmLeave}, "OK \r"},
 		{RFIDReq{Cmd: cmdTagCount}, "TGC\r"},
 		{RFIDReq{Cmd: cmdWrite, WriteData: []byte("1003010650438004")}, "WRT1003010650438004|2|0\r"},
 	}
