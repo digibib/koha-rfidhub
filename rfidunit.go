@@ -99,13 +99,16 @@ func (u *RFIDUnit) run() {
 				if !r.OK {
 					// TODO send cmdRerad to RFIDunit??
 
-					// get status of item, to have title to display on screen,
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
-					if err != nil {
-						sipLogger.Errorf(err.Error())
-						u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
-						u.Quit <- true
-						break
+					// Don't bother calling SIP if this is allready the current item
+					if stripLeading10(r.Tag) != currentItem.Item.Barcode {
+						// get status of item, to have title to display on screen,
+						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
+						if err != nil {
+							sipLogger.Errorf(err.Error())
+							u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
+							u.Quit <- true
+							break
+						}
 					}
 					currentItem.Action = "CHECKIN"
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
@@ -133,7 +136,9 @@ func (u *RFIDUnit) run() {
 			case UNITWaitForCheckinAlarmLeave:
 				u.state = UNITCheckin
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
+				currentItem.Item.Date = ""
 				currentItem.Item.Status = "IKKE innlevert"
+				currentItem.Item.OK = false
 				u.ToUI <- currentItem
 			case UNITCheckoutWaitForBegOK:
 				if !r.OK {

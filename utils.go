@@ -10,3 +10,7 @@ func addr2IP(addr string) string {
 	}
 	return addr[0:i]
 }
+
+func stripLeading10(barcode string) string {
+	return strings.TrimPrefix(barcode, "10")
+}

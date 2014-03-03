@@ -286,9 +286,10 @@ func TestCheckins(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
-			Label: "Heavy metal in Baghdad",
-			OK:    true,
-			Date:  "26/02/2014",
+			Label:   "Heavy metal in Baghdad",
+			OK:      true,
+			Barcode: "03010824124004",
+			Date:    "26/02/2014",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -426,5 +427,51 @@ func TestCheckouts(t *testing.T) {
 
 	a.c.Close()
 	d.c.Close()
+}
+
+// Test that rereading of items with missing tags doesn't trigger multiple SIP-calls
+func TestBarcodesSession(t *testing.T) {
+	sipPool.Init(1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	var d = newDummyRFID()
+	go d.run()
+	a := newDummyUIAgent()
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+	if err != nil {
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+	}
+	a.c = ws
+	go a.run(uiChan)
+
+	msg := <-d.incoming
+	if string(msg) != "VER2.00\r" {
+		t.Fatal("RFID-unit didn't get version init command")
+	}
+	d.outgoing <- []byte("OK\r")
+	_ = <-uiChan // CONNECT OK
+
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	_ = <-d.incoming
+	d.outgoing <- []byte("OK\r")
+
+	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
+	msg = <-d.incoming
+	println("got here?")
+	d.outgoing <- []byte("OK\r")
+
+	_ = <-uiChan
+	sipPool.Init(1, FailingSIPResponse())
+	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
+	msg = <-d.incoming
+	d.outgoing <- []byte("OK\r")
+
+	uiMsg := <-uiChan
+
+	if uiMsg.SIPError {
+		t.Fatalf("Rereading of failed tags triggered multiple SIP-calls")
+	}
 
 }
