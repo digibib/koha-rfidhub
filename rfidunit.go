@@ -167,12 +167,13 @@ func (u *RFIDUnit) run() {
 					rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmOff", adr)
 				}
 			case UNITWaitForCheckoutAlarmOff:
-				if !r.OK {
-					// TODO quit
-					break
-				}
 				u.state = UNITCheckout
 				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				if !r.OK {
+					// TODO unit-test for this
+					currentItem.Item.OK = false
+					currentItem.Item.Status = "Får ikke skrudd av alarm!"
+				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckoutAlarmLeave:
 				if !r.OK {
