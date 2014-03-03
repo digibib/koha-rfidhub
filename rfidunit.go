@@ -21,6 +21,7 @@ const (
 	UNITWaitForCheckinAlarmOn
 	UNITWaitForCheckinAlarmLeave
 	UNITWaitForCheckoutAlarmOff
+	UNITOff
 )
 
 var rfidLogger = loggo.GetLogger("rfidunit")
@@ -143,6 +144,7 @@ func (u *RFIDUnit) run() {
 			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			rfidLogger.Infof("Closing TCP connection to %v", adr)
 			u.conn.Close()
+			u.state = UNITOff
 			return
 		}
 	}

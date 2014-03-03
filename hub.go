@@ -165,8 +165,11 @@ func (c *uiConn) reader() {
 			continue
 		}
 		hubLogger.Infof("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)
-		// TODO should block until unit is ready, how?
 		if c.unit != nil {
+			if c.unit.state == UNITOff {
+				c.unit = nil
+				continue
+			}
 			c.unit.FromUI <- m
 		}
 	}
