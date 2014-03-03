@@ -83,8 +83,8 @@ func (u *RFIDUnit) run() {
 			switch u.state {
 			case UNITCheckinWaitForBegOK:
 				if !r.OK {
-					// TODO handle this
-					// quit?
+					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+					u.Quit <- true
 				}
 				u.state = UNITCheckin
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
