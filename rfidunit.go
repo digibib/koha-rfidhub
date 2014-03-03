@@ -121,7 +121,7 @@ func (u *RFIDUnit) run() {
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
-					rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmOn", adr)
+					rfidLogger.Infof("[%v] UNITCheckinNWaitForAlarmOn", adr)
 				}
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
