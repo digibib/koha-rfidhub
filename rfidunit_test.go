@@ -101,7 +101,7 @@ func init() {
 	//loggo.RemoveWriter("default")
 
 	// setup & start the hub
-	cfg = &config{TCPPort: "6005"}
+	cfg = &config{TCPPort: "6007"}
 	sipPool = NewSIPConnPool(0)
 	uiChan = make(chan UIMsg)
 	hub = newHub()
@@ -160,6 +160,7 @@ func TestRFIDUnitInitVersionFailure(t *testing.T) {
 
 	a.c.Close()
 	d.c.Close()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestUnavailableSIPServer(t *testing.T) {
@@ -308,9 +309,10 @@ func TestCheckins(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
-			Label:  "Heavy metal in Baghdad",
-			OK:     false,
-			Status: "IKKE innlevert",
+			Label:   "Heavy metal in Baghdad",
+			Barcode: "03010824124004",
+			OK:      false,
+			Status:  "IKKE innlevert",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -388,9 +390,10 @@ func TestCheckouts(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
-			Label:  "Krutt-Kim",
-			OK:     false,
-			Status: "Item checked out to another patron",
+			Label:   "Krutt-Kim",
+			OK:      false,
+			Barcode: "03011174511003",
+			Status:  "Item checked out to another patron",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -411,9 +414,10 @@ func TestCheckouts(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
-			Label: "Cat's cradle",
-			OK:    true,
-			Date:  "31/03/2014",
+			Label:   "Cat's cradle",
+			OK:      true,
+			Barcode: "03011063175001",
+			Date:    "31/03/2014",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)

@@ -87,7 +87,7 @@ func (h *Hub) run() {
 			}
 			hubLogger.Infof("<- RFID-unit[%v:%v] %q", ip, cfg.TCPPort, msg)
 
-			if initError != "" && !r.OK {
+			if initError == "" && !r.OK {
 				initError = "RFID-unit responded with NOK"
 			}
 

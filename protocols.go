@@ -51,6 +51,7 @@ type RFIDResp struct {
 
 type item struct {
 	Label   string // [bok] Forfatter - tittel
+	Barcode string
 	Date    string // 10/03/2013
 	Status  string
 	Unknown bool // true if SIP server cant give any information

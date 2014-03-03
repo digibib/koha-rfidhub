@@ -153,7 +153,7 @@ func checkoutParse(s string) UIMsg {
 			status = fields["AF"]
 		}
 	}
-	return UIMsg{Item: item{OK: ok, Date: checkoutDate, Status: status, Label: fields["AJ"]}}
+	return UIMsg{Item: item{OK: ok, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
 }
 
 func itemStatusParse(s string) UIMsg {
@@ -163,5 +163,5 @@ func itemStatusParse(s string) UIMsg {
 	if fields["AJ"] == "" {
 		unknown = true
 	}
-	return UIMsg{Item: item{OK: false, Unknown: unknown, Label: fields["AJ"]}}
+	return UIMsg{Item: item{OK: false, Barcode: fields["AB"], Unknown: unknown, Label: fields["AJ"]}}
 }
