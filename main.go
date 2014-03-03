@@ -27,7 +27,7 @@ func main() {
 		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
-			SIPServer:         "wombat:6001",
+			SIPServer:         "knakk:6001",
 			NumSIPConnections: 5,
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
