@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"net"
-	"strings"
 
 	"github.com/loggo/loggo"
 )
@@ -17,10 +16,12 @@ const (
 	UNITCheckinWaitForBegOK
 	UNITCheckin
 	UNITCheckout
+	UNITCheckoutWaitForBegOK
 	UNITWriting
 	UNITWaitForCheckinAlarmOn
 	UNITWaitForCheckinAlarmLeave
 	UNITWaitForCheckoutAlarmOff
+	UNITWaitForCheckoutAlarmLeave
 	UNITOff
 )
 
@@ -30,6 +31,7 @@ var rfidLogger = loggo.GetLogger("rfidunit")
 type RFIDUnit struct {
 	state    UnitState
 	dept     string
+	patron   string
 	vendor   Vendor
 	conn     net.Conn
 	FromUI   chan UIMsg
@@ -67,14 +69,14 @@ func (u *RFIDUnit) run() {
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "CHECKOUT":
-				u.state = UNITCheckout
-				rfidLogger.Infof("unit %v state CHECKOUT", adr)
+				u.state = UNITCheckoutWaitForBegOK
+				u.patron = uiReq.Patron
+				rfidLogger.Infof("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			}
 		case msg := <-u.FromRFID:
-			rfidLogger.Infof("<- [%v] %v", adr, strings.TrimSpace(string(msg)))
 			r, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
@@ -110,7 +112,7 @@ func (u *RFIDUnit) run() {
 					u.state = UNITWaitForCheckinAlarmLeave
 					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
-					// proceed with checkin or checkout transaciton
+					// proceed with checkin transaciton
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
@@ -119,7 +121,7 @@ func (u *RFIDUnit) run() {
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
-					rfidLogger.Infof("[%v] UNITCheckinNWaitForAlarmOn", adr)
+					rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmOn", adr)
 				}
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
@@ -133,8 +135,54 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
 				currentItem.Item.Status = "IKKE innlevert"
 				u.ToUI <- currentItem
+			case UNITCheckoutWaitForBegOK:
+				if !r.OK {
+					rfidLogger.Warningf("[%v] RFID failed to start scanning, shutting down.", adr)
+					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+					u.Quit <- true
+					break
+				}
+				u.state = UNITCheckout
+				rfidLogger.Infof("[%v] UNITCheckout", adr)
 			case UNITCheckout:
-				// TODO
+				if !r.OK {
+					// TODO get item info and send to ui
+				} else {
+					// proced with checkout
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout("hutl", r.Tag), checkinParse)
+					if err != nil {
+						sipLogger.Errorf(err.Error())
+						// TODO give UI error response?
+						break
+					}
+					currentItem.Action = "CHECKOUT"
+					if !currentItem.Item.OK {
+						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
+						u.state = UNITWaitForCheckoutAlarmLeave
+						rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
+						break
+					}
+					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOff})
+					u.state = UNITWaitForCheckoutAlarmOff
+					rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmOff", adr)
+				}
+			case UNITWaitForCheckoutAlarmOff:
+				if !r.OK {
+					// TODO quit
+					break
+				}
+				u.state = UNITCheckout
+				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				u.ToUI <- currentItem
+			case UNITWaitForCheckoutAlarmLeave:
+				if !r.OK {
+					// TODO quit
+					break
+				}
+				u.state = UNITCheckout
+				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				//currentItem.Item.Status = "IKKE innlevert"
+				u.ToUI <- currentItem
 			}
 
 		case <-u.Quit:
@@ -159,6 +207,7 @@ func (u *RFIDUnit) tcpReader() {
 			// println(err.Error()) = EOF
 			break
 		}
+		rfidLogger.Infof("<- [%v] %q", u.conn.RemoteAddr().String(), msg)
 		u.FromRFID <- msg
 	}
 }
@@ -172,7 +221,7 @@ func (u *RFIDUnit) tcpWriter() {
 			rfidLogger.Warningf(err.Error())
 			break
 		}
-		rfidLogger.Infof("-> [%v] %v", u.conn.RemoteAddr().String(), strings.TrimSpace(string(msg)))
+		rfidLogger.Infof("-> [%v] %q", u.conn.RemoteAddr().String(), msg)
 		err = w.Flush()
 		if err != nil {
 			rfidLogger.Warningf(err.Error())

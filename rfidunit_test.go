@@ -38,12 +38,12 @@ func (d *dummyRFID) writer() {
 	for msg := range d.outgoing {
 		_, err := w.Write(msg)
 		if err != nil {
-			println(err)
+			println(err.Error())
 			break
 		}
 		err = w.Flush()
 		if err != nil {
-			println(err)
+			println(err.Error())
 			break
 		}
 	}
@@ -332,13 +332,10 @@ func TestCheckins(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
-/*
 func TestCheckouts(t *testing.T) {
-	// Create & start the dummy RFID tcp server
+	sipPool.Init(1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
-
-	// Connect dummy UI agent
 	a := newDummyUIAgent()
 	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
 	if err != nil {
@@ -347,8 +344,83 @@ func TestCheckouts(t *testing.T) {
 	a.c = ws
 	go a.run(uiChan)
 
-	time.Sleep(100 * time.Millisecond)
-
 	// TESTS /////////////////////////////////////////////////////////////////
+
+	msg := <-d.incoming
+	if string(msg) != "VER2.00\r" {
+		t.Fatal("RFID-unit didn't get version init command")
+	}
+	d.outgoing <- []byte("OK\r")
+
+	uiMsg := <-uiChan
+	want := UIMsg{Action: "CONNECT"}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get notified of succesfull rfid connect")
+	}
+
+	// Send "CHECKOUT" message from UI and verify that the UI gets notified of
+	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKOUT", "Patron": "95"}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	msg = <-d.incoming
+	if string(msg) != "BEG\r" {
+		t.Fatal("UI -> CHECKOUT: RFID-unit didn't get instructed to start scanning")
+	}
+
+	// acknowledge BEG command
+	d.outgoing <- []byte("OK\r")
+
+	// Simulate book on RFID-unit, but SIP show that book is allready checked out.
+	// Verify that UI gets notified with the books title, along with an error message
+	sipPool.Init(1, fakeSIPResponse("120NUN20140303    102741AOHUTL|AA95|AB03011174511003|AJKrutt-Kim|AH|AFItem checked out to another patron|BLY|\r"))
+	d.outgoing <- []byte("RDT1003011174511003:NO:02030000|0\r")
+
+	msg = <-d.incoming
+	if string(msg) != "OK \r" {
+		t.Errorf("Alarm was changed after unsuccessful checkout")
+	}
+	d.outgoing <- []byte("OK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKOUT",
+		Item: item{
+			Label:  "Krutt-Kim",
+			OK:     false,
+			Status: "Item checked out to another patron",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct message when item is allready checked out to another patron")
+	}
+
+	// Test successfull checkout
+	sipPool.Init(1, fakeSIPResponse("121NNY20140303    110236AOHUTL|AA95|AB03011063175001|AJCat's cradle|AH20140331    235900|\r"))
+	d.outgoing <- []byte("RDT1003011063175001:NO:02030000|0\r")
+
+	msg = <-d.incoming
+	if string(msg) != "OK0\r" {
+		t.Errorf("Alarm was not turned off after successful checkout")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKOUT",
+		Item: item{
+			Label: "Cat's cradle",
+			OK:    true,
+			Date:  "03/03/2014",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct message after succesfull checkout")
+	}
+
+	a.c.Close()
+	d.c.Close()
+
 }
-*/
