@@ -54,7 +54,7 @@ type item struct {
 	Date    string // 10/03/2013
 	Status  string
 	Unknown bool // true if SIP server cant give any information
-	OK      bool // false = mangler brikke / klarte ikke lese den
+	OK      bool // false = mangler brikke / klarte ikke lese den. TODO rename TransactionOK ?
 }
 
 // UIMsg is a message to or from Koha's user interface.
