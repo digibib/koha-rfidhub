@@ -413,7 +413,7 @@ func TestCheckouts(t *testing.T) {
 		Item: item{
 			Label: "Cat's cradle",
 			OK:    true,
-			Date:  "03/03/2014",
+			Date:  "31/03/2014",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
