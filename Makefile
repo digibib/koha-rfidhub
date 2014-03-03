@@ -13,7 +13,7 @@ profile: build
 	go tool pprof ./koha-rfidhub ./prof.out
 
 run:
-	@go run main.go handlers.go config.go rfidunit.go hub.go protocols.go utils.go pool.go sip.go vendors.go --race
+	@go run main.go handlers.go config.go rfidunit.go hub.go protocols.go utils.go pool.go sip.go vendors.go
 
 todo:
 	@grep -rn TODO *.go || true
