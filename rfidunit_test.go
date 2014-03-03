@@ -459,7 +459,6 @@ func TestBarcodesSession(t *testing.T) {
 
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 	msg = <-d.incoming
-	println("got here?")
 	d.outgoing <- []byte("OK\r")
 
 	_ = <-uiChan

@@ -21,15 +21,15 @@ type Vendor interface {
 type RFIDCommand uint8
 
 const (
-	cmdInitVersion RFIDCommand = iota // VER2
-	cmdBeginScan                      // BEG
-	cmdEndScan                        // END
-	cmdRereadTag                      // OKR
-	cmdAlarmOn                        // OK1
-	cmdAlarmOff                       // OK0
-	cmdAlarmLeave                     // OK (leave alarm in its current state)
-	cmdTagCount                       // TGC
-	cmdWrite                          // WRT
+	cmdInitVersion RFIDCommand = iota
+	cmdBeginScan
+	cmdEndScan
+	cmdRereadTag
+	cmdAlarmOn
+	cmdAlarmOff
+	cmdAlarmLeave
+	cmdTagCount
+	cmdWrite
 )
 
 // RFIDReq represents request to be sent to the RFID-unit.
@@ -40,17 +40,17 @@ type RFIDReq struct {
 
 // RFIDResp represents a parsed response from the RFID-unit.
 type RFIDResp struct {
-	OK         bool     // OK or NOK
-	TagCount   int      // RDT<tagid>|<tagCount>
-	Tag        string   // ex: RDT1003010856677001:NO:02030000 TODO strip extended ID
-	WrittenIDs []string // OK|<id1>|<id2>|..
+	OK         bool
+	TagCount   int
+	Tag        string
+	WrittenIDs []string
 }
 
 // UI message protocol ////////////////////////////////////////////////////////
 // For communication between Koha's web intranet interface and the RFID-hub.
 
 type item struct {
-	Label   string // [bok] Forfatter - tittel
+	Label   string
 	Barcode string
 	Date    string // 10/03/2013
 	Status  string

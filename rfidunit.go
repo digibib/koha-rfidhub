@@ -27,7 +27,7 @@ const (
 
 var rfidLogger = loggo.GetLogger("rfidunit")
 
-// RFIDUnit represents a connected RFID-unit (skrankeløsning)
+// RFIDUnit represents a connected RFID-unit.
 type RFIDUnit struct {
 	state    UnitState
 	dept     string
@@ -55,6 +55,9 @@ func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 	}
 }
 
+// run starts the state-machine for a RFID-unit. It will shut down when the UI-
+// connection is lost, on certain RFID-errors, or if it can't get a working
+// connection to the SIP-server.
 func (u *RFIDUnit) run() {
 	var currentItem UIMsg
 	var adr = u.conn.RemoteAddr().String()
@@ -170,7 +173,7 @@ func (u *RFIDUnit) run() {
 					u.state = UNITWaitForCheckoutAlarmLeave
 					rfidLogger.Infof("[%v] UNITCheckoutWaitForAlarmLeave", adr)
 				} else {
-					// proced with checkout
+					// proced with checkout transaction
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.patron, r.Tag), checkoutParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
@@ -221,13 +224,13 @@ func (u *RFIDUnit) run() {
 	}
 }
 
-// read from tcp connection and pipe into FromRFID channel
+// tcpReader reads from a TCP connection and pipe the messages into FromRFID channel.
 func (u *RFIDUnit) tcpReader() {
 	r := bufio.NewReader(u.conn)
 	for {
 		msg, err := r.ReadBytes('\r')
 		if err != nil {
-			// println(err.Error()) = EOF
+			// err = io.EOF
 			break
 		}
 		rfidLogger.Infof("<- [%v] %q", u.conn.RemoteAddr().String(), msg)
@@ -235,7 +238,7 @@ func (u *RFIDUnit) tcpReader() {
 	}
 }
 
-// write messages from channel ToRFID to tcp connection
+// tcpWriter writes messages from channel ToRFID to a TCP connection.
 func (u *RFIDUnit) tcpWriter() {
 	w := bufio.NewWriter(u.conn)
 	for msg := range u.ToRFID {
