@@ -149,7 +149,7 @@ func (u *RFIDUnit) run() {
 					// TODO get item info and send to ui
 				} else {
 					// proced with checkout
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout("hutl", r.Tag), checkinParse)
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.patron, r.Tag), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response?
