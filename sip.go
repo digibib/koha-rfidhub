@@ -131,7 +131,7 @@ func checkinParse(s string) UIMsg {
 		date = fmt.Sprintf("%s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Date: date, Label: fields["AJ"], Status: status}}
+	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {
