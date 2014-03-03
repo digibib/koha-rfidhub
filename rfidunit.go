@@ -77,14 +77,18 @@ func (u *RFIDUnit) run() {
 			r, err := u.vendor.ParseRFIDResp(msg)
 			if err != nil {
 				rfidLogger.Errorf(err.Error())
-				// TODO reset state? UNITIdle & u.vendor.Reset()
+				rfidLogger.Warningf("[%v] failed to understand RFID message, shutting down.", adr)
+				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+				u.Quit <- true
 				break
 			}
 			switch u.state {
 			case UNITCheckinWaitForBegOK:
 				if !r.OK {
+					rfidLogger.Warningf("[%v] failed to start scanning, shutting down.", adr)
 					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 					u.Quit <- true
+					break
 				}
 				u.state = UNITCheckin
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
