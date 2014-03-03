@@ -59,7 +59,7 @@ type item struct {
 
 // UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
-	Action    string // CHECKIN/CHECKOUT/ERROR
+	Action    string // CHECKIN/CHECKOUT/CONNECT
 	RFIDError bool
 	SIPError  bool
 	Item      item

@@ -85,7 +85,7 @@ func (u *RFIDUnit) run() {
 			switch u.state {
 			case UNITCheckinWaitForBegOK:
 				if !r.OK {
-					rfidLogger.Warningf("[%v] failed to start scanning, shutting down.", adr)
+					rfidLogger.Warningf("[%v] RFID failed to start scanning, shutting down.", adr)
 					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 					u.Quit <- true
 					break

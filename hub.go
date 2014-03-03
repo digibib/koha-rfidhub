@@ -128,20 +128,6 @@ func (h *Hub) run() {
 			close(c.send)
 			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
 			c.unit = nil
-			// case msg := <-h.broadcast:
-			// 	hubLogger.Infof("-> UI %+v", msg)
-			// 	for c := range h.uiConnections {
-			// 		if (c.ipFilter == "") || (c.ipFilter == addr2IP(msg.IP)) {
-			// 			select {
-			// 			case c.send <- msg.Msg:
-			// 			default:
-			// 				hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
-			// 				//srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
-			// 				close(c.send)
-			// 				delete(h.uiConnections, c)
-			// 			}
-			// 		}
-			// 	}
 		}
 	}
 }
