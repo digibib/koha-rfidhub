@@ -73,6 +73,7 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case "CHECKOUT":
 				u.state = UNITCheckoutWaitForBegOK
+				// TODO return error if Patron == ""
 				u.patron = uiReq.Patron
 				rfidLogger.Infof("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.vendor.Reset()
