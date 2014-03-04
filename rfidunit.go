@@ -44,8 +44,8 @@ type RFIDUnit struct {
 func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 	return &RFIDUnit{
 		state:    UNITIdle,
-		dept:     "HUTL",
-		vendor:   newDeichmanVendor(),
+		dept:     "HUTL",              // TODO get this from config + patch SIP server!
+		vendor:   newDeichmanVendor(), // TODO get this from config too
 		conn:     c,
 		FromUI:   make(chan UIMsg),
 		ToUI:     send,

@@ -24,6 +24,7 @@ type Hub struct {
 	// Unregister a UI connection:
 	uiUnReg chan *uiConn
 	// Notify of lost TCP connection to RFID
+	// TODO remove this??
 	tcpLost chan *uiConn
 }
 
@@ -113,6 +114,7 @@ func (h *Hub) run() {
 			// c.unit.Quit <- true
 			// c.unit = nil
 		case c := <-h.uiUnReg:
+			// TODO rethink this logic
 			// TODO I shouldnt have to do this; but got panic because
 			//      "close of closed channel" on some occations.
 			if _, ok := h.uiConnections[c]; !ok {
@@ -124,10 +126,10 @@ func (h *Hub) run() {
 				c.unit.Quit <- true
 			}
 			//srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
-			delete(h.uiConnections, c)
-			close(c.send)
-			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
 			c.unit = nil
+			close(c.send)
+			delete(h.uiConnections, c)
+			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
 		}
 	}
 }
