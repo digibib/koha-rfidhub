@@ -38,7 +38,7 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 		sipLogger.Errorf(err.Error())
 		return nil, err
 	}
-	sipLogger.Infof("-> %v", strings.Trim(out, "\n\r"))
+	sipLogger.Infof("-> %v", strings.TrimSpace(out))
 
 	reader := bufio.NewReader(conn)
 	in, err := reader.ReadString('\r')
@@ -52,7 +52,7 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 		return nil, errors.New("SIP login failed")
 	}
 
-	sipLogger.Infof("<- %v", strings.Trim(in, "\n\r"))
+	sipLogger.Infof("<- %v", strings.TrimSpace(in))
 	return conn, nil
 
 }
