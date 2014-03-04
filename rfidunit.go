@@ -104,7 +104,7 @@ func (u *RFIDUnit) run() {
 
 					// Don't bother calling SIP if this is allready the current item
 					if stripLeading10(r.Tag) != currentItem.Item.Barcode {
-						// get status of item, to have title to display on screen,
+						// Get item infor from SIP, to have title to display
 						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
 						if err != nil {
 							sipLogger.Errorf(err.Error())
@@ -118,11 +118,11 @@ func (u *RFIDUnit) run() {
 					u.state = UNITWaitForCheckinAlarmLeave
 					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
-					// proceed with checkin transaciton
+					// Proceed with checkin transaciton
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
-						// TODO give UI error response?
+						// TODO give UI error response, and send cmdAlarmLeave to RFID
 						break
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
