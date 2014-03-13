@@ -75,13 +75,13 @@ type parserFunc func(string) UIMsg
 // response into a UIMsg.
 func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
-	c := p.Get()
-	defer p.Release(c)
+	conn := p.Get()
+	defer p.Release(conn)
 
 	// 1. Send the SIP request
-	_, err := c.Write([]byte(req))
+	_, err := conn.c.Write([]byte(req))
 	if err != nil {
-		// TODO refill Pool if conn is bad
+		p.lost <- conn // assume it is disconnected
 		return UIMsg{}, err
 	}
 
@@ -89,7 +89,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 
 	// 2. Read SIP response
 
-	reader := bufio.NewReader(c)
+	reader := bufio.NewReader(conn.c)
 	resp, err := reader.ReadString('\r')
 	if err != nil {
 		return UIMsg{}, err

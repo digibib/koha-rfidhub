@@ -49,6 +49,7 @@ func main() {
 
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	sipPool = NewSIPConnPool(cfg.NumSIPConnections)
+	go sipPool.Monitor()
 
 	logger.Infof("Starting Websocket hub")
 	go hub.run()

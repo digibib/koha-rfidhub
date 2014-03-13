@@ -24,6 +24,12 @@ You'll need the [Go tools](http://golang.org/doc/install) to build. If you have 
 ### From package
 Debian package with a compiled binary for amd64 will be provided from our apt-repository. The package will set up an upstart job to run the server.
 
+## Production use
+
+### Prequisites
+* The RFID-hub uses a pool of TCP connections to the SIP-server. Because the SIP-server infers the transaction branch from the accounts in SIPConfig.xml, a small patch must be applied to make the SIP-server accept the AO-field (institution id) as branch when doing checkouts. TODO create bugzilla entry & link it here.
+
+
 ## Q&A
 __Q__: What happens if staff opens a browser and goes to the checkout or checkin page, when another browser or browsertab on the same computer allready has one of those pages open?
 

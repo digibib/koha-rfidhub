@@ -6,25 +6,84 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"sync"
 )
 
-// TODO monitoring? what if a connection is lost? how to detect?
-// fn Pool.LostConn()
-//   pool.size--
-//   pool.conn <- InitNewConn()
-//   pool.size++
-
-// ConnPool keeps a pool of <size> TCP connections
-type ConnPool struct {
-	sync.RWMutex
-	size int
-	conn chan net.Conn
+// SIPConn represents a TCP-connection to the SIP-server. The id is used
+// to generate a username/password pair, which must be present in your
+// Koha instance'S SIPConfig.xml.
+type SIPConn struct {
+	id int
+	c  net.Conn
 }
 
 // InitFunction is the function to initalize a connection before adding it to
 // the pool.
 type InitFunction func(interface{}) (net.Conn, error)
+
+// ConnPool keeps a pool of n SIPConn to Koha's SIP-server.
+type ConnPool struct {
+	// read from this channel to get an connection
+	conn chan SIPConn
+	// send disconnected connections to this channel
+	lost chan SIPConn
+	// fn to initialize the connection
+	initFn InitFunction
+}
+
+// Init sets up <size> connections
+func (p *ConnPool) Init(size int) {
+	p.conn = make(chan SIPConn, size)
+	p.lost = make(chan SIPConn, size)
+	for i := 1; i <= size; i++ {
+		conn := SIPConn{id: i}
+		c, err := p.initFn(i)
+		if err != nil {
+			p.lost <- conn
+			continue
+		}
+		conn.c = c
+		p.conn <- conn
+	}
+}
+
+// NewSIPConnPool creates a new pool with <size> SIP connections. There is no
+// guarantee that it succeedes; the user must call Size() to be sure there are
+// any.
+func NewSIPConnPool(size int) *ConnPool {
+	p := &ConnPool{}
+	p.initFn = initSIPConn
+	p.Init(size)
+	return p
+}
+
+// Get a connection from the pool.
+func (p *ConnPool) Get() SIPConn {
+	return <-p.conn
+}
+
+// Release returns the connection back to the pool.
+func (p *ConnPool) Release(c SIPConn) {
+	p.conn <- c
+}
+
+// Monitor tries re-connect any disconnected connections. Meant to be run in
+// its own goroutine.
+func (p *ConnPool) Monitor() {
+	for conn := range p.lost {
+		c, err := p.initFn(conn.id)
+		if err != nil {
+			p.lost <- conn
+			continue
+		}
+		conn.c = c
+		p.conn <- conn
+	}
+}
+
+// Size returns the (aprox) number of connections currently in the pool.
+func (p *ConnPool) Size() int {
+	return len(p.conn)
+}
 
 func initSIPConn(i interface{}) (net.Conn, error) {
 	conn, err := net.Dial("tcp", cfg.SIPServer)
@@ -47,54 +106,12 @@ func initSIPConn(i interface{}) (net.Conn, error) {
 		return nil, err
 	}
 
+	sipLogger.Infof("<- %v", strings.TrimSpace(in))
+
 	// fail if response == 940 (success == 941)
 	if in[2] == '0' {
 		return nil, errors.New("SIP login failed")
 	}
 
-	sipLogger.Infof("<- %v", strings.TrimSpace(in))
 	return conn, nil
-
-}
-
-// Init sets up <size> connections
-func (p *ConnPool) Init(size int, initFn InitFunction) {
-	p.conn = make(chan net.Conn, size)
-	var count = 0
-	p.Lock()
-	defer p.Unlock()
-	for i := 1; i <= size; i++ {
-		conn, err := initFn(i)
-		if err != nil {
-			continue
-		}
-		count++
-		p.conn <- conn
-	}
-	p.size = count
-}
-
-// NewSIPConnPool creates a new pool with <size> SIP connections. There is no
-// guarantee that it succeedes; the user must call Size() to be sure.
-func NewSIPConnPool(size int) *ConnPool {
-	p := &ConnPool{}
-	p.Init(size, initSIPConn)
-	return p
-}
-
-// Get a connection from the pool.
-func (p *ConnPool) Get() net.Conn {
-	return <-p.conn
-}
-
-// Release returns the connection back to the pool.
-func (p *ConnPool) Release(c net.Conn) {
-	p.conn <- c
-}
-
-// Size returns the number of connections currently in the pool.
-func (p *ConnPool) Size() int {
-	p.RLock()
-	defer p.RUnlock()
-	return p.size
 }

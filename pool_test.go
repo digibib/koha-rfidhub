@@ -34,28 +34,29 @@ func TestConnectionPool(t *testing.T) {
 	s := specs.New(t)
 
 	p := &ConnPool{}
-	p.Init(2, initFakeConn)
-	s.Expect(2, p.size)
+	p.initFn = initFakeConn
+	p.Init(2)
+	s.Expect(2, p.Size())
 
-	c := p.Get()
-	r := bufio.NewReader(c)
+	conn := p.Get()
+	r := bufio.NewReader(conn.c)
 	msg, err := r.ReadString('\r')
 	s.ExpectNil(err)
 	s.Expect("result #1\r", msg)
-	p.Release(c)
+	p.Release(conn)
 
-	c2 := p.Get()
-	r = bufio.NewReader(c2)
+	conn2 := p.Get()
+	r = bufio.NewReader(conn2.c)
 	msg, err = r.ReadString('\r')
 	s.ExpectNil(err)
 	s.Expect("result #2\r", msg)
 
-	c = p.Get()
-	r = bufio.NewReader(c)
+	conn = p.Get()
+	r = bufio.NewReader(conn.c)
 	msg, err = r.ReadString('\r')
 	s.Expect(io.EOF, err)
 
-	ch := make(chan net.Conn)
+	ch := make(chan SIPConn)
 	go func() {
 		ch <- p.Get()
 	}()
@@ -67,8 +68,8 @@ func TestConnectionPool(t *testing.T) {
 		break
 	}
 
-	p.Release(c)
-	p.Release(c2)
+	p.Release(conn)
+	p.Release(conn2)
 	time.Sleep(time.Millisecond * 10)
 	select {
 	case <-ch:
