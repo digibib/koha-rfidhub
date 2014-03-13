@@ -2,6 +2,7 @@
 A server to manage checkins and checkouts in Koha using RFID-equipment.
 
 ## Status
+    13.03.2014 Checkins/checkouts tested and confirmed working
     27.02.2014 Under develpoment - not stable or usable yet
 
 ## Description
@@ -34,4 +35,4 @@ __A__: The staff UI will get notified. The servers doesn't retry to connect to t
 
 __Q__: Will barcode scanners work together at the same time RFID-equipment is used?
 
-__A__: Yes, they should.
+__A__: Yes. But bear in mind that a barcode scanner will "hit enter" and force the page to reload, and thus the table of RFID-transactions will be cleared.
