@@ -76,5 +76,28 @@ func TestConnectionPool(t *testing.T) {
 	default:
 		t.Fail()
 	}
+}
+
+func TestPoolMonitoring(t *testing.T) {
+	p := &ConnPool{}
+	p.initFn = initFakeConn
+	p.Init(2)
+	go p.Monitor()
+	if p.Size() != 2 {
+		t.Errorf("ConnPool.Size() => %d, expected 2", p.Size())
+	}
+
+	c := p.Get()
+	if p.Size() != 1 {
+		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
+	}
+
+	p.lost <- c
+
+	time.Sleep(100 * time.Millisecond)
+
+	if p.Size() != 2 {
+		t.Errorf("ConnPool.Size() => %d, expected 2", p.Size())
+	}
 
 }
