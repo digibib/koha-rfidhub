@@ -69,7 +69,7 @@ func ErrorSIPResponse() func(i interface{}) (net.Conn, error) {
 		c.ReadWriter = bufio.NewReadWriter(
 			bufio.NewReader(bytes.NewBufferString("")),
 			bufferWriter)
-		return c, errors.New("Cannot open SIP-connection")
+		return c, errors.New("cannot open SIP-connection")
 	}
 }
 

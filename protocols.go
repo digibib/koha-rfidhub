@@ -16,6 +16,7 @@ type Vendor interface {
 }
 
 // RFID-unit message protocol /////////////////////////////////////////////////
+
 // RFIDCommand represents the type of request to send to the RFID-unit.
 type RFIDCommand uint8
 

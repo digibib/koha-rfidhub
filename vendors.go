@@ -106,5 +106,5 @@ func (v *deichmanVendor) ParseRFIDResp(r []byte) (RFIDResp, error) {
 	}
 
 	// Fall-through case:
-	return RFIDResp{}, fmt.Errorf("ParseRFIDResp: cannot parse this response: %q", r)
+	return RFIDResp{}, fmt.Errorf("deichmanVendor.ParseRFIDResp: cannot parse this response: %q", r)
 }
