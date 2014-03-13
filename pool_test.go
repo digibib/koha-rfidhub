@@ -88,16 +88,24 @@ func TestPoolMonitoring(t *testing.T) {
 	}
 
 	c := p.Get()
-	if p.Size() != 1 {
-		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
+	c2 := p.Get()
+	if p.Size() != 0 {
+		t.Errorf("ConnPool.Size() => %d, expected 0", p.Size())
 	}
 
 	p.lost <- c
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
-	if p.Size() != 2 {
-		t.Errorf("ConnPool.Size() => %d, expected 2", p.Size())
+	if p.Size() != 1 {
+		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
 	}
+	p.initFn = ErrorSIPResponse()
+	p.lost <- c2
 
+	time.Sleep(10 * time.Millisecond)
+
+	if p.Size() != 1 {
+		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
+	}
 }

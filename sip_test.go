@@ -6,6 +6,7 @@ import (
 	"io"
 	// "io/ioutil"
 	// "log"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -55,6 +56,20 @@ func FailingSIPResponse() func(i interface{}) (net.Conn, error) {
 			bufio.NewReader(bytes.NewBufferString("")),
 			bufferWriter)
 		return c, nil
+	}
+}
+
+func ErrorSIPResponse() func(i interface{}) (net.Conn, error) {
+	return func(i interface{}) (net.Conn, error) {
+		var (
+			c fakeTCPConn
+			b bytes.Buffer
+		)
+		bufferWriter := bufio.NewWriter(&b)
+		c.ReadWriter = bufio.NewReadWriter(
+			bufio.NewReader(bytes.NewBufferString("")),
+			bufferWriter)
+		return c, errors.New("Cannot open SIP-connection")
 	}
 }
 
