@@ -116,7 +116,7 @@ func (h *Hub) run() {
 		case c := <-h.uiUnReg:
 			// TODO rethink this logic
 			// TODO I shouldnt have to do this; but got panic because
-			//      "close of closed channel" on some occations.
+			//      "close of closed channel" on some random occations.
 			if _, ok := h.uiConnections[c]; !ok {
 				println("TODO FIXME connection allready gone!")
 				break

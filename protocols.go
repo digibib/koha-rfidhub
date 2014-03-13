@@ -1,7 +1,5 @@
 package main
 
-// RFID-unit message protocol /////////////////////////////////////////////////
-
 // Vendor interface which any RFID-vendor must satisfy. In order for a vendor
 // to be supported, its read/write logic must be similar to what the RFIDUnit
 // state-machine expects, and its protocol must be a text-based message exchange
@@ -17,6 +15,7 @@ type Vendor interface {
 	ParseRFIDResp([]byte) (RFIDResp, error)
 }
 
+// RFID-unit message protocol /////////////////////////////////////////////////
 // RFIDCommand represents the type of request to send to the RFID-unit.
 type RFIDCommand uint8
 
@@ -54,13 +53,14 @@ type item struct {
 	Barcode string
 	Date    string // 10/03/2013
 	Status  string
+	NumTags bool
 	Unknown bool // true if SIP server cant give any information
 	OK      bool // false = mangler brikke / klarte ikke lese den. TODO rename TransactionOK ?
 }
 
 // UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
-	Action string // CHECKIN/CHECKOUT/CONNECT /ERROR?
+	Action string // CHECKIN/CHECKOUT/CONNECT/WRITE  TODO: what bout ERROR?
 	// ErrorMessage ?? TODO think
 	Patron    string
 	RFIDError bool

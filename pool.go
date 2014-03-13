@@ -74,7 +74,8 @@ func (p *ConnPool) Init(size int, initFn InitFunction) {
 	p.size = count
 }
 
-// NewSIPConnPool creates a new pool with <size> SIP connections.
+// NewSIPConnPool creates a new pool with <size> SIP connections. There is no
+// guarantee that it succeedes; the user must call Size() to be sure.
 func NewSIPConnPool(size int) *ConnPool {
 	p := &ConnPool{}
 	p.Init(size, initSIPConn)

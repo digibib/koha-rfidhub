@@ -70,7 +70,7 @@ func pairFieldIDandValue(msg string) map[string]string {
 // returns the JSON message to be sent to the user interface.
 type parserFunc func(string) UIMsg
 
-// DoSIPCall performs a SIP request with an automat's SIP TCP-connection. It
+// DoSIPCall performs a SIP request using a SIP TCP-connection from a pool. It
 // takes a SIP message as a string and a parser function to transform the SIP
 // response into a UIMsg.
 func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
@@ -148,7 +148,7 @@ func checkoutParse(s string) UIMsg {
 		checkoutDate = fmt.Sprintf("%s/%s/%s", date[6:8], date[4:6], date[0:4])
 	} else {
 		if fields["AF"] == "1" {
-			status = "Failed! Don't know why; SIP should give more information"
+			status = "Failed! Don't know why. I wish the SIP-server gave us more information..."
 		} else {
 			status = fields["AF"]
 		}
