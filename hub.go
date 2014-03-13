@@ -23,9 +23,6 @@ type Hub struct {
 	uiReg chan *uiConn
 	// Unregister a UI connection:
 	uiUnReg chan *uiConn
-	// Notify of lost TCP connection to RFID
-	// TODO remove this??
-	tcpLost chan *uiConn
 }
 
 // newHub creates and returns a new Hub instance.
@@ -34,7 +31,6 @@ func newHub() *Hub {
 		uiConnections: make(map[*uiConn]bool),
 		uiReg:         make(chan *uiConn),
 		uiUnReg:       make(chan *uiConn),
-		tcpLost:       make(chan *uiConn),
 	}
 }
 
@@ -107,12 +103,6 @@ func (h *Hub) run() {
 			go unit.tcpReader()
 			// Notify UI of success:
 			c.send <- UIMsg{Action: "CONNECT"}
-		case c := <-h.tcpLost:
-			// Notify the UI of lost connection to the RFID-unit:
-			c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
-			// Shutdown the RFID-unit state-machine:
-			// c.unit.Quit <- true
-			// c.unit = nil
 		case c := <-h.uiUnReg:
 			// TODO rethink this logic
 			// TODO I shouldnt have to do this; but got panic because
