@@ -120,13 +120,12 @@ func (h *Hub) run() {
 			c.send <- UIMsg{Action: "CONNECT"}
 		case c := <-h.uiUnReg:
 			var ip = addr2IP(c.ws.RemoteAddr().String())
-			// TODO rethink this logic
-			// TODO I shouldnt have to do this; but got panic because
-			//      "close of closed channel" on some random occations.
+
 			if _, ok := h.uiConnections[c]; !ok {
-				println("TODO FIXME connection allready gone!")
+				// Connection allready gone. I can't understand how, but...
 				break
 			}
+
 			// Shutdown RFID-unit state-machine if it exists:
 			if c.unit != nil {
 				c.unit.Quit <- true
@@ -140,7 +139,7 @@ func (h *Hub) run() {
 				}
 			}
 			delete(h.uiConnections, c)
-			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
+			hubLogger.Infof("UI[%v] connection lost", ip)
 		}
 	}
 }

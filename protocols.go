@@ -52,17 +52,16 @@ type RFIDResp struct {
 type item struct {
 	Label   string
 	Barcode string
-	Date    string // 10/03/2013
+	Date    string // Format: 10/03/2013
 	Status  string
 	NumTags bool
 	Unknown bool // true if SIP server cant give any information
-	OK      bool // false = mangler brikke / klarte ikke lese den. TODO rename TransactionOK ?
+	OK      bool // true if the transaction succeded
 }
 
 // UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
-	Action string // CHECKIN/CHECKOUT/CONNECT/WRITE  TODO: what bout ERROR?
-	// ErrorMessage ?? TODO think
+	Action    string // CHECKIN/CHECKOUT/CONNECT/WRITE
 	Patron    string
 	RFIDError bool
 	SIPError  bool
