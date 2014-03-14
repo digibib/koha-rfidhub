@@ -42,10 +42,15 @@ type RFIDUnit struct {
 }
 
 func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
+	ip := addr2IP(c.RemoteAddr().String())
+	dept := cfg.FallBackBranch
+	if branch, ok := cfg.ClientsMap[ip]; ok {
+		dept = branch
+	}
 	return &RFIDUnit{
 		state:    UNITIdle,
-		dept:     "HUTL",              // TODO get this from config + patch SIP server!
-		vendor:   newDeichmanVendor(), // TODO get this from config too
+		dept:     dept,
+		vendor:   newDeichmanVendor(), // TODO get this from config
 		conn:     c,
 		FromUI:   make(chan UIMsg),
 		ToUI:     send,
@@ -175,7 +180,7 @@ func (u *RFIDUnit) run() {
 					rfidLogger.Infof("[%v] UNITCheckoutWaitForAlarmLeave", adr)
 				} else {
 					// proced with checkout transaction
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.patron, r.Tag), checkoutParse)
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.dept, u.patron, r.Tag), checkoutParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response?

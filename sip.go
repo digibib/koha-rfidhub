@@ -23,7 +23,7 @@ const (
 	sipMsg09 = "09N%v%vAP<location>|AO%v|AB%v|AC<terminalpassword>|\r"
 
 	// 11: Checkout
-	sipMsg11 = "11YN%v%vAO<institutionid>|AA%s|AB%s|AC<terminalpassword>|\r"
+	sipMsg11 = "11YN%v%vAO%s|AA%s|AB%s|AC<terminalpassword>|\r"
 
 	// 17: Item status
 	sipMsg17 = "17%vAO<institutionid>|AB%s|AC<terminalpassword>|\r"
@@ -46,9 +46,9 @@ func sipFormMsgCheckin(dept, barcode string) string {
 	return fmt.Sprintf(sipMsg09, now, now, dept, barcode)
 }
 
-func sipFormMsgCheckout(username, barcode string) string {
+func sipFormMsgCheckout(dept, username, barcode string) string {
 	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg11, now, now, username, barcode)
+	return fmt.Sprintf(sipMsg11, now, now, dept, username, barcode)
 }
 
 func sipFormMsgItemStatus(barcode string) string {

@@ -45,6 +45,17 @@ func fakeSIPResponse(s string) func(i interface{}) (net.Conn, error) {
 	}
 }
 
+func EchoSIPResponse() func(i interface{}) (net.Conn, error) {
+	return func(i interface{}) (net.Conn, error) {
+		c := fakeTCPConn{}
+		bufferWriter := bufio.NewWriter(&c.buffer)
+		c.ReadWriter = bufio.NewReadWriter(
+			bufio.NewReader(&c.buffer),
+			bufferWriter)
+		return c, nil
+	}
+}
+
 func FailingSIPResponse() func(i interface{}) (net.Conn, error) {
 	return func(i interface{}) (net.Conn, error) {
 		var (
@@ -131,7 +142,7 @@ func TestSIPCheckout(t *testing.T) {
 	p := &ConnPool{}
 	p.initFn = fakeSIPResponse("121NNY20140124    110740AOHUTL|AA2|AB03011174511003|AJKrutt-Kim|AH20140221    235900|\r")
 	p.Init(1)
-	res, err := DoSIPCall(p, sipFormMsgCheckout("2", "03011174511003"), checkoutParse)
+	res, err := DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "03011174511003"), checkoutParse)
 
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.OK)
@@ -140,7 +151,7 @@ func TestSIPCheckout(t *testing.T) {
 
 	p.initFn = fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r")
 	p.Init(1)
-	res, err = DoSIPCall(p, sipFormMsgCheckout("2", "1234"), checkoutParse)
+	res, err = DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "1234"), checkoutParse)
 
 	s.ExpectNil(err)
 	s.Expect(false, res.Item.OK)

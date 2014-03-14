@@ -101,7 +101,7 @@ func init() {
 	//loggo.RemoveWriter("default")
 
 	// setup & start the hub
-	cfg = &config{TCPPort: "6007"}
+	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string)}
 	sipPool = NewSIPConnPool(0)
 	uiChan = make(chan UIMsg)
 	hub = newHub()
@@ -484,8 +484,9 @@ func TestBarcodesSession(t *testing.T) {
 	if uiMsg.SIPError {
 		t.Fatalf("Rereading of failed tags triggered multiple SIP-calls")
 	}
-	d.c.Close()
 
+	a.c.Close()
+	d.c.Close()
 }
 
 /*
