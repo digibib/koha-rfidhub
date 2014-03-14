@@ -29,6 +29,7 @@ func main() {
 			HTTPPort:          "8899",
 			SIPServer:         "knakk:6001",
 			NumSIPConnections: 5,
+			FallBackBranch:    "ukjent",
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
 		logger.Warningf("No config.json file found, using standard values")
