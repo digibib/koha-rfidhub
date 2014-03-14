@@ -17,7 +17,9 @@ var hubLogger = loggo.GetLogger("hub")
 // If successfull, a state-machine is started to handle all communications
 // between the UI, SIP and the RFID-unit.
 type Hub struct {
-	// A map of connected UI connections:
+	// Connected IP adresses
+	ipAdresses map[string]*uiConn
+	// A map of connected UI connections
 	uiConnections map[*uiConn]bool
 	// Register a new UI connection:
 	uiReg chan *uiConn
@@ -28,6 +30,7 @@ type Hub struct {
 // newHub creates and returns a new Hub instance.
 func newHub() *Hub {
 	return &Hub{
+		ipAdresses:    make(map[string]*uiConn),
 		uiConnections: make(map[*uiConn]bool),
 		uiReg:         make(chan *uiConn),
 		uiUnReg:       make(chan *uiConn),
@@ -39,10 +42,22 @@ func (h *Hub) run() {
 	for {
 		select {
 		case c := <-h.uiReg:
-			// TODO check if connnection allready exist from that IP
-			h.uiConnections[c] = true
-
 			var ip = addr2IP(c.ws.RemoteAddr().String())
+
+			// If there is allready a connection from that IP - close it
+			if oldc, ok := h.ipAdresses[ip]; ok {
+				hubLogger.Warningf("Duplicate websocket-connection from IP %v; closing the first one.", ip)
+				if oldc.unit != nil {
+					oldc.unit.Quit <- true
+				}
+
+				oldc.unit = nil
+				oldc.ws.Close()
+				hubLogger.Infof("UI[%v] connection closed", ip)
+			}
+
+			h.uiConnections[c] = true
+			h.ipAdresses[ip] = c
 			hubLogger.Infof("UI[%v] connected", ip)
 
 			// Fail if we don't have any SIP connections in the pool
@@ -104,6 +119,7 @@ func (h *Hub) run() {
 			// Notify UI of success:
 			c.send <- UIMsg{Action: "CONNECT"}
 		case c := <-h.uiUnReg:
+			var ip = addr2IP(c.ws.RemoteAddr().String())
 			// TODO rethink this logic
 			// TODO I shouldnt have to do this; but got panic because
 			//      "close of closed channel" on some random occations.
@@ -115,9 +131,14 @@ func (h *Hub) run() {
 			if c.unit != nil {
 				c.unit.Quit <- true
 			}
-			//srv.stopChan <- addr2IP(c.ws.RemoteAddr().String())
+
 			c.unit = nil
 			close(c.send)
+			if sameC, ok := h.ipAdresses[ip]; ok {
+				if c == sameC {
+					delete(h.ipAdresses, ip)
+				}
+			}
 			delete(h.uiConnections, c)
 			hubLogger.Infof("UI[%v] connection lost", addr2IP(c.ws.RemoteAddr().String()))
 		}

@@ -484,5 +484,35 @@ func TestBarcodesSession(t *testing.T) {
 	if uiMsg.SIPError {
 		t.Fatalf("Rereading of failed tags triggered multiple SIP-calls")
 	}
+	d.c.Close()
 
 }
+
+// Verify that if a second websocket connection is opened from the same IP,
+// the first connection is closed.
+// func TestDuplicateClientConnections(t *testing.T) {
+// 	sipPool.initFn = FailingSIPResponse()
+// 	sipPool.Init(0)
+
+// 	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+// 	if err != nil {
+// 		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+// 	}
+
+// 	time.Sleep(100 * time.Millisecond)
+
+// 	_, _, err = websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+// 	if err != nil {
+// 		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+// 	}
+
+// 	time.Sleep(100 * time.Millisecond)
+
+// 	// Try writing to the first connection; it should be closed:
+// 	err = ws.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CONNECT"}`))
+// 	if err == nil {
+// 		t.Error("Two ws connections from the same IP should not be allowed")
+// 	}
+// 	time.Sleep(100 * time.Millisecond)
+
+// }
