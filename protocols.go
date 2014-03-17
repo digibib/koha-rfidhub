@@ -47,6 +47,7 @@ type RFIDResp struct {
 }
 
 // UI message protocol ////////////////////////////////////////////////////////
+
 // For communication between Koha's web intranet interface and the RFID-hub.
 
 type item struct {
