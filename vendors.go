@@ -103,6 +103,17 @@ func (v *deichmanVendor) ParseRFIDResp(r []byte) (RFIDResp, error) {
 			t := strings.Split(b[0], ":")
 			return RFIDResp{OK: ok, Tag: t[0]}, nil
 		}
+		if s[0:3] == "NOK" {
+			b := strings.Split(s[3:l], "|")
+			if len(b) <= 1 {
+				break
+			}
+			i, err := strconv.Atoi(b[1])
+			if err != nil {
+				break
+			}
+			return RFIDResp{OK: false, TagCount: i}, nil
+		}
 	}
 
 	// Fall-through case:
