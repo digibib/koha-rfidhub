@@ -139,7 +139,7 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckin
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
 				if !r.OK {
-					currentItem.Item.Status = "IKKE innlevert"
+					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
 				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckinAlarmLeave:
@@ -203,7 +203,7 @@ func (u *RFIDUnit) run() {
 				if !r.OK {
 					// TODO unit-test for this
 					currentItem.Item.OK = false
-					currentItem.Item.Status = "Får ikke skrudd av alarm!"
+					currentItem.Item.Status = "Feil: fikk ikke skrudd av alarm."
 				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckoutAlarmLeave:
