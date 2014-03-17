@@ -20,7 +20,7 @@ const (
 	sipMsg63 = "63012%v          AO%s|AA%s|AC<terminalpassword>|AD%s|BP000|BQ9999|\r"
 
 	// 09: Chekin
-	sipMsg09 = "09N%v%vAP<location>|AO%v|AB%v|AC<terminalpassword>|\r"
+	sipMsg09 = "09N%v%vAP%v|AO%v|AB%v|AC<terminalpassword>|\r"
 
 	// 11: Checkout
 	sipMsg11 = "11YN%v%vAO%s|AA%s|AB%s|AC<terminalpassword>|\r"
@@ -43,7 +43,7 @@ func sipFormMsgAuthenticate(dept, username, pin string) string {
 
 func sipFormMsgCheckin(dept, barcode string) string {
 	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg09, now, now, dept, barcode)
+	return fmt.Sprintf(sipMsg09, now, now, dept, dept, barcode)
 }
 
 func sipFormMsgCheckout(dept, username, barcode string) string {

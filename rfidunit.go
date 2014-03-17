@@ -125,7 +125,7 @@ func (u *RFIDUnit) run() {
 					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
 					// Proceed with checkin transaciton
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin("hutl", r.Tag), checkinParse)
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin(u.dept, r.Tag), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response, and send cmdAlarmLeave to RFID
