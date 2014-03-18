@@ -65,7 +65,7 @@ type item struct {
 	Barcode string
 	Date    string // Format: 10/03/2013
 	Status  string
-	NumTags bool
+	NumTags int
 	Unknown bool // true if SIP server cant give any information
 	OK      bool // true if the transaction succeded
 }

@@ -17,11 +17,19 @@ const (
 	UNITCheckin
 	UNITCheckout
 	UNITCheckoutWaitForBegOK
-	UNITWriting
 	UNITWaitForCheckinAlarmOn
 	UNITWaitForCheckinAlarmLeave
 	UNITWaitForCheckoutAlarmOff
 	UNITWaitForCheckoutAlarmLeave
+	UNITPreWriteStep1
+	UNITPreWriteStep2
+	UNITPreWriteStep3
+	UNITPreWriteStep4
+	UNITPreWriteStep5
+	UNITPreWriteStep6
+	UNITPreWriteStep7
+	UNITWriting
+	UNITWaitForTagCount
 	UNITOff
 )
 
@@ -65,11 +73,25 @@ func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 // connection to the SIP-server.
 func (u *RFIDUnit) run() {
 	var currentItem UIMsg
+	var err error
 	var adr = u.conn.RemoteAddr().String()
 	for {
 		select {
 		case uiReq := <-u.FromUI:
 			switch uiReq.Action {
+			case "ITEM-INFO":
+				currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(uiReq.Item.Barcode), itemStatusParse)
+				if err != nil {
+					sipLogger.Errorf(err.Error())
+					u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
+					u.Quit <- true
+					break
+				}
+				u.state = UNITWaitForTagCount
+				rfidLogger.Infof("[%v] UNITCheckinWaitForTagCount", adr)
+				u.vendor.Reset()
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdTagCount})
+				u.ToRFID <- r
 			case "CHECKIN":
 				u.state = UNITCheckinWaitForBegOK
 				rfidLogger.Infof("[%v] UNITCheckinWaitForBegOK", adr)
@@ -214,6 +236,15 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckout
 				rfidLogger.Infof("[%v] UNITCheckout", adr)
 				//currentItem.Item.Status = "IKKE innlevert"
+				u.ToUI <- currentItem
+			case UNITWaitForTagCount:
+				if r.OK {
+					currentItem.Item.OK = true
+				}
+				u.state = UNITIdle
+				rfidLogger.Infof("[%v] UNITIdle", adr)
+				currentItem.Action = "ITEM-INFO"
+				currentItem.Item.NumTags = r.TagCount
 				u.ToUI <- currentItem
 			}
 
