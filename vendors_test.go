@@ -19,7 +19,7 @@ func TestDeichmanGenerateRFIDRequest(t *testing.T) {
 		{RFIDReq{Cmd: cmdAlarmOn}, "OK1\r"},
 		{RFIDReq{Cmd: cmdAlarmLeave}, "OK \r"},
 		{RFIDReq{Cmd: cmdTagCount}, "TGC\r"},
-		{RFIDReq{Cmd: cmdWrite, WriteData: []byte("1003010650438004")}, "WRT1003010650438004|2|0\r"},
+		{RFIDReq{Cmd: cmdWrite, WriteData: []byte("1003010650438004"), TagCount: 2}, "WRT1003010650438004|2|0\r"},
 		{RFIDReq{Cmd: cmdSLPLBN}, "SLPLBN|02030000\r"},
 		{RFIDReq{Cmd: cmdSLPLBC}, "SLPLBC|NO\r"},
 		{RFIDReq{Cmd: cmdSLPDTM}, "SLPDTM|DS24\r"},
@@ -30,7 +30,6 @@ func TestDeichmanGenerateRFIDRequest(t *testing.T) {
 	}
 
 	v := newDeichmanVendor()
-	v.TagCount = 2
 
 	for _, tt := range tests {
 		r := string(v.GenerateRFIDReq(tt.in))

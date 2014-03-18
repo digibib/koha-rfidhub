@@ -10,7 +10,6 @@ import (
 // deichmanVendor is the RFID-vendor used on Deichman's staff PCs.
 // http://it.deichman.no/projects/biblioteksystem/wiki/RFID-kommunikasjon
 type deichmanVendor struct {
-	TagCount  int
 	WriteMode bool
 }
 
@@ -20,7 +19,6 @@ func newDeichmanVendor() *deichmanVendor {
 
 func (v *deichmanVendor) Reset() {
 	v.WriteMode = false
-	v.TagCount = 0
 }
 
 func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
@@ -42,8 +40,9 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 	case cmdTagCount:
 		return []byte("TGC\r")
 	case cmdWrite:
+		v.WriteMode = true
 		var b bytes.Buffer
-		i := strconv.Itoa(v.TagCount)
+		i := strconv.Itoa(r.TagCount)
 		b.Write([]byte("WRT"))
 		b.Write(r.WriteData)
 		b.WriteByte('|')

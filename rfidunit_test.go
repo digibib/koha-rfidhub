@@ -535,6 +535,82 @@ func TestWriteLogic(t *testing.T) {
 		t.Fatal("UI didn't get the correct item info ")
 	}
 
+	err = a.c.WriteMessage(websocket.TextMessage,
+		[]byte(`{"Action":"WRITE", "Item": {"Barcode": "03010824124004", "NumTags": 2}}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	msg = <-d.incoming
+	if string(msg) != "SLPLBN|02030000\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPLBC|NO\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPDTM|DS24\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPSSB|0\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPCRD|1\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPWTM|5000\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "SLPRSS|1\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	msg = <-d.incoming
+	if string(msg) != "WRT03010824124004|2|0\r" {
+		t.Fatal("Reader didn't get the right Write command")
+	}
+
+	d.outgoing <- []byte("OK|E004010046A847AD|E004010046A847AD\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "WRITE",
+		Item: item{
+			Label:   "Heavy metal in Baghdad",
+			OK:      true,
+			Barcode: "03010824124004",
+			NumTags: 2,
+			Status:  "OK, preget",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct item info after WRITE command ")
+	}
+
 	a.c.Close()
 	d.c.Close()
 }

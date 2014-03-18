@@ -92,6 +92,11 @@ func (u *RFIDUnit) run() {
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdTagCount})
 				u.ToRFID <- r
+			case "WRITE":
+				u.state = UNITPreWriteStep1
+				rfidLogger.Infof("[%v] UNITPreWriteStep1", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBN})
+				u.ToRFID <- r
 			case "CHECKIN":
 				u.state = UNITCheckinWaitForBegOK
 				rfidLogger.Infof("[%v] UNITCheckinWaitForBegOK", adr)
@@ -245,6 +250,81 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Infof("[%v] UNITIdle", adr)
 				currentItem.Action = "ITEM-INFO"
 				currentItem.Item.NumTags = r.TagCount
+				u.ToUI <- currentItem
+			case UNITPreWriteStep1:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep2
+				rfidLogger.Infof("[%v] UNITPreWriteStep2", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBC})
+				u.ToRFID <- r
+			case UNITPreWriteStep2:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep3
+				rfidLogger.Infof("[%v] UNITPreWriteStep3", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPDTM})
+				u.ToRFID <- r
+			case UNITPreWriteStep3:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep4
+				rfidLogger.Infof("[%v] UNITPreWriteStep4", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPSSB})
+				u.ToRFID <- r
+			case UNITPreWriteStep4:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep5
+				rfidLogger.Infof("[%v] UNITPreWriteStep5", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPCRD})
+				u.ToRFID <- r
+			case UNITPreWriteStep5:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep6
+				rfidLogger.Infof("[%v] UNITPreWriteStep6", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPWTM})
+				u.ToRFID <- r
+			case UNITPreWriteStep6:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep7
+				rfidLogger.Infof("[%v] UNITPreWriteStep7", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPRSS})
+				u.ToRFID <- r
+			case UNITPreWriteStep7:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITWriting
+				rfidLogger.Infof("[%v] UNITWriting", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdWrite,
+					WriteData: []byte(currentItem.Item.Barcode),
+					TagCount:  currentItem.Item.NumTags})
+				u.ToRFID <- r
+			case UNITWriting:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITIdle
+				rfidLogger.Debugf("[%v] UNITIdle", adr)
+				currentItem.Action = "WRITE"
+				currentItem.Item.Status = "OK, preget"
 				u.ToUI <- currentItem
 			}
 

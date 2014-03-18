@@ -46,6 +46,7 @@ const (
 type RFIDReq struct {
 	Cmd       RFIDCommand
 	WriteData []byte
+	TagCount  int
 }
 
 // RFIDResp represents a parsed response from the RFID-unit.
