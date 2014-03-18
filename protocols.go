@@ -31,7 +31,7 @@ const (
 	cmdTagCount
 	cmdWrite
 
-	// Initialize writer commands. Reader eturns OK or NOK.
+	// Initialize writer commands. Reader returns OK or NOK.
 	// TODO choose better names when/if we get documentation
 	cmdSLPLBN // SLPLBN|02030000 (library number)
 	cmdSLPLBC // SLPLBC|NO (country code)
