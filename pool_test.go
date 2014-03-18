@@ -100,8 +100,8 @@ func TestPoolMonitoring(t *testing.T) {
 	if p.Size() != 1 {
 		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
 	}
-	p.initFn = ErrorSIPResponse()
-	p.lost <- c2
+	p.initFn = ErrorSIPResponse() // Triggers race condition, but we don't mind
+	p.lost <- c2                  // because we never change initFn in production use.
 
 	time.Sleep(10 * time.Millisecond)
 
