@@ -30,6 +30,16 @@ const (
 	cmdAlarmLeave
 	cmdTagCount
 	cmdWrite
+
+	// Initialize writer commands. Reader eturns OK or NOK.
+	// TODO choose better names when/if we get documentation
+	cmdSLPLBN // SLPLBN|02030000 (library number)
+	cmdSLPLBC // SLPLBC|NO (country code)
+	cmdSLPDTM // SLPDTM|DS24 (the Danish standard)
+	cmdSLPSSB // SLPSSB|0 (?)
+	cmdSLPCRD // SLPCRD|1 (?)
+	cmdSLPWTM // SLPWTM|5000 (timeout in ms)
+	cmdSLPRSS // SLPRSS|1 (?)
 )
 
 // RFIDReq represents request to be sent to the RFID-unit.

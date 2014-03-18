@@ -50,6 +50,20 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 		b.WriteString(i)
 		b.Write([]byte("|0\r"))
 		return b.Bytes()
+	case cmdSLPLBN:
+		return []byte("SLPLBN|02030000\r")
+	case cmdSLPLBC:
+		return []byte("SLPLBC|NO\r")
+	case cmdSLPDTM:
+		return []byte("SLPDTM|DS24\r")
+	case cmdSLPSSB:
+		return []byte("SLPSSB|0\r")
+	case cmdSLPCRD:
+		return []byte("SLPCRD|1\r")
+	case cmdSLPWTM:
+		return []byte("SLPWTM|5000\r")
+	case cmdSLPRSS:
+		return []byte("SLPRSS|1\r")
 	}
 
 	// This can never be reached, given all cases of r.Cmd are covered above:
