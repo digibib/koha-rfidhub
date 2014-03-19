@@ -189,7 +189,7 @@ func (u *RFIDUnit) run() {
 						// TODO give UI error response, and send cmdAlarmLeave to RFID
 						break
 					}
-					u.failedAlarmOn[r.Barcode] = r.Tag // Store tag id for potential retry
+					u.failedAlarmOn[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
 					rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmOn", adr)
@@ -201,7 +201,7 @@ func (u *RFIDUnit) run() {
 					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
 				} else {
-					delete(u.failedAlarmOn, addLeading10(currentItem.Item.Barcode))
+					delete(u.failedAlarmOn, currentItem.Item.Barcode)
 					currentItem.Item.Status = ""
 					currentItem.Item.OK = true
 					// retry others if len(u.failedAlarm) > 0:
