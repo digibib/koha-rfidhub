@@ -367,7 +367,7 @@ func (u *RFIDUnit) run() {
 				if r.TagCount != currentItem.Item.NumTags {
 					// mismatch between number of tags on the RFID-reader and
 					// expected number assigned in the UI.
-					errMsg := fmt.Sprintf("forventet %d brikker, men fant %d.",
+					errMsg := fmt.Sprintf("forventet %d brikke(r), men fant %d.",
 						currentItem.Item.NumTags, r.TagCount)
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true,
 						Item: item{Status: errMsg}}
