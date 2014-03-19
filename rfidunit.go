@@ -31,6 +31,7 @@ const (
 	UNITWriting
 	UNITWaitForTagCount
 	UNITOff
+	UNITWaitForEndOK
 )
 
 var rfidLogger = loggo.GetLogger("rfidunit")
@@ -83,6 +84,11 @@ func (u *RFIDUnit) run() {
 		select {
 		case uiReq := <-u.FromUI:
 			switch uiReq.Action {
+			case "END":
+				u.state = UNITWaitForEndOK
+				rfidLogger.Infof("[%v] UNITWaitForEndOK", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
+				u.ToRFID <- r
 			case "ITEM-INFO":
 				currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(uiReq.Item.Barcode), itemStatusParse)
 				if err != nil {
@@ -134,6 +140,14 @@ func (u *RFIDUnit) run() {
 				break
 			}
 			switch u.state {
+			case UNITWaitForEndOK:
+				if !r.OK {
+					// In the unlikely event of not being able to stop read loop:
+					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+					u.Quit <- true
+					break
+				}
+				u.state = UNITIdle
 			case UNITCheckinWaitForBegOK:
 				if !r.OK {
 					rfidLogger.Warningf("[%v] RFID failed to start scanning, shutting down.", adr)
