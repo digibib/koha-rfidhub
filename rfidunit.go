@@ -108,6 +108,7 @@ func (u *RFIDUnit) run() {
 				u.state = UNITPreWriteStep1
 				rfidLogger.Debugf("[%v] UNITPreWriteStep1", adr)
 				currentItem.Item.NumTags = uiReq.Item.NumTags
+				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBN})
 				u.ToRFID <- r
 			case "CHECKIN":
