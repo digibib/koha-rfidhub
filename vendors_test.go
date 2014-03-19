@@ -50,8 +50,10 @@ func TestDeichmanParseRFIDResp(t *testing.T) {
 		{"NOK|2\r", RFIDResp{OK: false, TagCount: 2}},
 		{"OK|2\r", RFIDResp{OK: true, TagCount: 2}},
 		{"OK|12\r", RFIDResp{OK: true, TagCount: 12}},
-		{"RDT1003010856677001:NO:02030000|0\r", RFIDResp{OK: true, Tag: "1003010856677001"}},
-		{"RDT1003010856677001:NO:02030000|1\r", RFIDResp{OK: false, Tag: "1003010856677001"}},
+		{"RDT1003010856677001:NO:02030000|0\r",
+			RFIDResp{OK: true, Barcode: "1003010856677001", Tag: "1003010856677001:NO:02030000"}},
+		{"RDT1003010856677001:NO:02030000|1\r",
+			RFIDResp{OK: false, Barcode: "1003010856677001", Tag: "1003010856677001:NO:02030000"}},
 	}
 
 	v := newDeichmanVendor()

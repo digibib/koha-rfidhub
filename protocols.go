@@ -53,7 +53,8 @@ type RFIDReq struct {
 type RFIDResp struct {
 	OK         bool
 	TagCount   int
-	Tag        string
+	Tag        string // 1003010530352001:NO:02030000
+	Barcode    string // 1003010530352001
 	WrittenIDs []string
 }
 

@@ -136,9 +136,9 @@ func (u *RFIDUnit) run() {
 					// Missing tags case
 
 					// Don't bother calling SIP if this is allready the current item
-					if stripLeading10(r.Tag) != currentItem.Item.Barcode {
+					if stripLeading10(r.Barcode) != currentItem.Item.Barcode {
 						// Get item infor from SIP, to have title to display
-						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
+						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Barcode), itemStatusParse)
 						if err != nil {
 							sipLogger.Errorf(err.Error())
 							u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
@@ -152,7 +152,7 @@ func (u *RFIDUnit) run() {
 					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
 					// Proceed with checkin transaciton
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin(u.dept, r.Tag), checkinParse)
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin(u.dept, r.Barcode), checkinParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response, and send cmdAlarmLeave to RFID
@@ -191,9 +191,9 @@ func (u *RFIDUnit) run() {
 					// TODO test this case
 
 					// Don't bother calling SIP if this is allready the current item
-					if stripLeading10(r.Tag) != currentItem.Item.Barcode {
+					if stripLeading10(r.Barcode) != currentItem.Item.Barcode {
 						// get status of item, to have title to display on screen,
-						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Tag), itemStatusParse)
+						currentItem, err = DoSIPCall(sipPool, sipFormMsgItemStatus(r.Barcode), itemStatusParse)
 						if err != nil {
 							sipLogger.Errorf(err.Error())
 							u.ToUI <- UIMsg{Action: "CONNECT", SIPError: true}
@@ -207,7 +207,7 @@ func (u *RFIDUnit) run() {
 					rfidLogger.Infof("[%v] UNITCheckoutWaitForAlarmLeave", adr)
 				} else {
 					// proced with checkout transaction
-					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.dept, u.patron, r.Tag), checkoutParse)
+					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.dept, u.patron, r.Barcode), checkoutParse)
 					if err != nil {
 						sipLogger.Errorf(err.Error())
 						// TODO give UI error response?
