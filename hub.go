@@ -174,6 +174,7 @@ func (c *uiConn) reader() {
 		var m UIMsg
 		err = json.Unmarshal(msg, &m)
 		if err != nil {
+			hubLogger.Errorf("failed to unmarshal JSON: %q", msg)
 			continue
 		}
 		hubLogger.Infof("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)
