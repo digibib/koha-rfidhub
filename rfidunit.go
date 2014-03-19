@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 
 	"github.com/loggo/loggo"
@@ -28,6 +29,7 @@ const (
 	UNITPreWriteStep5
 	UNITPreWriteStep6
 	UNITPreWriteStep7
+	UNITPreWriteStep8
 	UNITWriting
 	UNITWaitForTagCount
 	UNITOff
@@ -105,6 +107,7 @@ func (u *RFIDUnit) run() {
 			case "WRITE":
 				u.state = UNITPreWriteStep1
 				rfidLogger.Debugf("[%v] UNITPreWriteStep1", adr)
+				currentItem.Item.NumTags = uiReq.Item.NumTags
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBN})
 				u.ToRFID <- r
 			case "CHECKIN":
@@ -349,6 +352,26 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep7:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				u.state = UNITPreWriteStep8
+				rfidLogger.Debugf("[%v] UNITPreWriteStep8 (TGC)", adr)
+				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdTagCount})
+				u.ToRFID <- r
+			case UNITPreWriteStep8:
+				if !r.OK {
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					break
+				}
+				if r.TagCount != currentItem.Item.NumTags {
+					// mismatch between number of tags on the RFID-reader and
+					// expected number assigned in the UI.
+					errMsg := fmt.Sprintf("forventet %d brikker, men fant %d.",
+						currentItem.Item.NumTags, r.TagCount)
+					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true,
+						Item: item{Status: errMsg}}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITWriting

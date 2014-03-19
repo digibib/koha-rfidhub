@@ -619,6 +619,13 @@ func TestWriteLogic(t *testing.T) {
 	d.outgoing <- []byte("OK\r")
 
 	msg = <-d.incoming
+	if string(msg) != "TGC\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("OK|2\r")
+
+	msg = <-d.incoming
 	if string(msg) != "WRT03010824124004|2|0\r" {
 		t.Fatal("Reader didn't get the right Write command")
 	}
