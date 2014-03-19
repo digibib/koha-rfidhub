@@ -127,7 +127,7 @@ func (u *RFIDUnit) run() {
 				for _, v := range u.failedAlarmOn {
 					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
 					u.ToRFID <- r
-					break // TODO the others where?
+					break // Remaining will be triggered in case UNITWaitForCheckinAlarmOn
 				}
 			}
 		case msg := <-u.FromRFID:
