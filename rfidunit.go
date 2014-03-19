@@ -86,7 +86,7 @@ func (u *RFIDUnit) run() {
 			switch uiReq.Action {
 			case "END":
 				u.state = UNITWaitForEndOK
-				rfidLogger.Infof("[%v] UNITWaitForEndOK", adr)
+				rfidLogger.Debugf("[%v] UNITWaitForEndOK", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 				u.ToRFID <- r
 			case "ITEM-INFO":
@@ -98,18 +98,18 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITWaitForTagCount
-				rfidLogger.Infof("[%v] UNITCheckinWaitForTagCount", adr)
+				rfidLogger.Debugf("[%v] UNITCheckinWaitForTagCount", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdTagCount})
 				u.ToRFID <- r
 			case "WRITE":
 				u.state = UNITPreWriteStep1
-				rfidLogger.Infof("[%v] UNITPreWriteStep1", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep1", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBN})
 				u.ToRFID <- r
 			case "CHECKIN":
 				u.state = UNITCheckinWaitForBegOK
-				rfidLogger.Infof("[%v] UNITCheckinWaitForBegOK", adr)
+				rfidLogger.Debugf("[%v] UNITCheckinWaitForBegOK", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
@@ -117,13 +117,13 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckoutWaitForBegOK
 				// TODO return error if Patron == ""
 				u.patron = uiReq.Patron
-				rfidLogger.Infof("[%v] UNITCheckoutWaitForBegOK", adr)
+				rfidLogger.Debugf("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "RETRY-ALARM-ON":
 				u.state = UNITWaitForCheckinAlarmOn
-				rfidLogger.Infof("[%v] UNITWaitForCheckinAlarmOn", adr)
+				rfidLogger.Debugf("[%v] UNITWaitForCheckinAlarmOn", adr)
 				for _, v := range u.failedAlarmOn {
 					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
 					u.ToRFID <- r
@@ -157,7 +157,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITCheckin
-				rfidLogger.Infof("[%v] UNITCheckin", adr)
+				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 			case UNITCheckin:
 				if !r.OK {
 					// Missing tags case
@@ -176,7 +176,7 @@ func (u *RFIDUnit) run() {
 					currentItem.Action = "CHECKIN"
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 					u.state = UNITWaitForCheckinAlarmLeave
-					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmLeave", adr)
+					rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmLeave", adr)
 				} else {
 					// Proceed with checkin transaciton
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckin(u.dept, r.Barcode), checkinParse)
@@ -188,11 +188,11 @@ func (u *RFIDUnit) run() {
 					u.failedAlarmOn[r.Barcode] = r.Tag // Store tag id for potential retry
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
-					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmOn", adr)
+					rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmOn", adr)
 				}
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
-				rfidLogger.Infof("[%v] UNITCheckin", adr)
+				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				if !r.OK {
 					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
@@ -203,7 +203,7 @@ func (u *RFIDUnit) run() {
 					// retry others if len(u.failedAlarm) > 0:
 					for _, v := range u.failedAlarmOn {
 						u.state = UNITWaitForCheckinAlarmOn
-						rfidLogger.Infof("[%v] UNITWaitForCheckinAlarmOn", adr)
+						rfidLogger.Debugf("[%v] UNITWaitForCheckinAlarmOn", adr)
 						r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
 						u.ToRFID <- r
 						break
@@ -212,7 +212,7 @@ func (u *RFIDUnit) run() {
 				u.ToUI <- currentItem
 			case UNITWaitForCheckinAlarmLeave:
 				u.state = UNITCheckin
-				rfidLogger.Infof("[%v] UNITCheckin", adr)
+				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				currentItem.Item.Date = ""
 				currentItem.Item.Status = "IKKE innlevert"
 				currentItem.Item.OK = false
@@ -225,7 +225,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITCheckout
-				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 			case UNITCheckout:
 				if !r.OK {
 					// Missing tags case
@@ -245,7 +245,7 @@ func (u *RFIDUnit) run() {
 					currentItem.Action = "CHECKOUT"
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 					u.state = UNITWaitForCheckoutAlarmLeave
-					rfidLogger.Infof("[%v] UNITCheckoutWaitForAlarmLeave", adr)
+					rfidLogger.Debugf("[%v] UNITCheckoutWaitForAlarmLeave", adr)
 				} else {
 					// proced with checkout transaction
 					currentItem, err = DoSIPCall(sipPool, sipFormMsgCheckout(u.dept, u.patron, r.Barcode), checkoutParse)
@@ -258,16 +258,16 @@ func (u *RFIDUnit) run() {
 					if !currentItem.Item.OK {
 						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 						u.state = UNITWaitForCheckoutAlarmLeave
-						rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
+						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
 						break
 					}
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOff})
 					u.state = UNITWaitForCheckoutAlarmOff
-					rfidLogger.Infof("[%v] UNITCheckoutNWaitForAlarmOff", adr)
+					rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmOff", adr)
 				}
 			case UNITWaitForCheckoutAlarmOff:
 				u.state = UNITCheckout
-				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 				if !r.OK {
 					// TODO unit-test for this
 					currentItem.Item.OK = false
@@ -280,7 +280,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITCheckout
-				rfidLogger.Infof("[%v] UNITCheckout", adr)
+				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 				//currentItem.Item.Status = "IKKE innlevert"
 				u.ToUI <- currentItem
 			case UNITWaitForTagCount:
@@ -288,7 +288,7 @@ func (u *RFIDUnit) run() {
 					currentItem.Item.OK = true
 				}
 				u.state = UNITIdle
-				rfidLogger.Infof("[%v] UNITIdle", adr)
+				rfidLogger.Debugf("[%v] UNITIdle", adr)
 				currentItem.Action = "ITEM-INFO"
 				currentItem.Item.NumTags = r.TagCount
 				u.ToUI <- currentItem
@@ -298,7 +298,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep2
-				rfidLogger.Infof("[%v] UNITPreWriteStep2", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep2", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBC})
 				u.ToRFID <- r
 			case UNITPreWriteStep2:
@@ -307,7 +307,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep3
-				rfidLogger.Infof("[%v] UNITPreWriteStep3", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep3", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPDTM})
 				u.ToRFID <- r
 			case UNITPreWriteStep3:
@@ -316,7 +316,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep4
-				rfidLogger.Infof("[%v] UNITPreWriteStep4", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep4", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPSSB})
 				u.ToRFID <- r
 			case UNITPreWriteStep4:
@@ -325,7 +325,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep5
-				rfidLogger.Infof("[%v] UNITPreWriteStep5", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep5", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPCRD})
 				u.ToRFID <- r
 			case UNITPreWriteStep5:
@@ -334,7 +334,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep6
-				rfidLogger.Infof("[%v] UNITPreWriteStep6", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep6", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPWTM})
 				u.ToRFID <- r
 			case UNITPreWriteStep6:
@@ -343,7 +343,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITPreWriteStep7
-				rfidLogger.Infof("[%v] UNITPreWriteStep7", adr)
+				rfidLogger.Debugf("[%v] UNITPreWriteStep7", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPRSS})
 				u.ToRFID <- r
 			case UNITPreWriteStep7:
@@ -352,7 +352,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				u.state = UNITWriting
-				rfidLogger.Infof("[%v] UNITWriting", adr)
+				rfidLogger.Debugf("[%v] UNITWriting", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdWrite,
 					Data:     []byte(currentItem.Item.Barcode),
 					TagCount: currentItem.Item.NumTags})

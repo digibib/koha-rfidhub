@@ -97,7 +97,7 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 }
 
 func init() {
-	loggo.ConfigureLoggers("<root>=INFO")
+	loggo.ConfigureLoggers("<root>=DEBUG")
 	//loggo.RemoveWriter("default")
 
 	// setup & start the hub
