@@ -127,7 +127,7 @@ func (u *RFIDUnit) run() {
 				for _, v := range u.failedAlarmOn {
 					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
 					u.ToRFID <- r
-					break // TODO the others where?
+					break // Remaining will be triggered in case UNITWaitForCheckinAlarmOn
 				}
 			}
 		case msg := <-u.FromRFID:
@@ -142,7 +142,8 @@ func (u *RFIDUnit) run() {
 			switch u.state {
 			case UNITWaitForEndOK:
 				if !r.OK {
-					// In the unlikely event of not being able to stop read loop:
+					// Bail out in the unlikely event of not being able to stop
+					// the scan loop:
 					u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 					u.Quit <- true
 					break
