@@ -26,7 +26,9 @@ const (
 	cmdEndScan
 	cmdRereadTag
 	cmdAlarmOn
+	cmdRetryAlarmOn
 	cmdAlarmOff
+	cmdRetryAlarmOff
 	cmdAlarmLeave
 	cmdTagCount
 	cmdWrite
@@ -44,9 +46,9 @@ const (
 
 // RFIDReq represents request to be sent to the RFID-unit.
 type RFIDReq struct {
-	Cmd       RFIDCommand
-	WriteData []byte
-	TagCount  int
+	Cmd      RFIDCommand
+	Data     []byte
+	TagCount int
 }
 
 // RFIDResp represents a parsed response from the RFID-unit.

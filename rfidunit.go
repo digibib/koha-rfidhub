@@ -37,16 +37,18 @@ var rfidLogger = loggo.GetLogger("rfidunit")
 
 // RFIDUnit represents a connected RFID-unit.
 type RFIDUnit struct {
-	state    UnitState
-	dept     string
-	patron   string
-	vendor   Vendor
-	conn     net.Conn
-	FromUI   chan UIMsg
-	ToUI     chan UIMsg
-	FromRFID chan []byte
-	ToRFID   chan []byte
-	Quit     chan bool
+	state          UnitState
+	dept           string
+	patron         string
+	vendor         Vendor
+	conn           net.Conn
+	failedAlarmOn  map[string]string // map[Barcode]Tag
+	failedAlarmOff map[string]string // map[Barcode]Tag
+	FromUI         chan UIMsg
+	ToUI           chan UIMsg
+	FromRFID       chan []byte
+	ToRFID         chan []byte
+	Quit           chan bool
 }
 
 func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
@@ -56,15 +58,17 @@ func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 		dept = branch
 	}
 	return &RFIDUnit{
-		state:    UNITIdle,
-		dept:     dept,
-		vendor:   newDeichmanVendor(), // TODO get this from config
-		conn:     c,
-		FromUI:   make(chan UIMsg),
-		ToUI:     send,
-		FromRFID: make(chan []byte),
-		ToRFID:   make(chan []byte),
-		Quit:     make(chan bool, 1),
+		state:          UNITIdle,
+		dept:           dept,
+		vendor:         newDeichmanVendor(), // TODO get this from config
+		conn:           c,
+		failedAlarmOn:  make(map[string]string),
+		failedAlarmOff: make(map[string]string),
+		FromUI:         make(chan UIMsg),
+		ToUI:           send,
+		FromRFID:       make(chan []byte),
+		ToRFID:         make(chan []byte),
+		Quit:           make(chan bool, 1),
 	}
 }
 
@@ -111,6 +115,14 @@ func (u *RFIDUnit) run() {
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
+			case "RETRY-ALARM-ON":
+				u.state = UNITWaitForCheckinAlarmOn
+				rfidLogger.Infof("[%v] UNITWaitForCheckinAlarmOn", adr)
+				for _, v := range u.failedAlarmOn {
+					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
+					u.ToRFID <- r
+					break // TODO the others where?
+				}
 			}
 		case msg := <-u.FromRFID:
 			r, err := u.vendor.ParseRFIDResp(msg)
@@ -158,6 +170,7 @@ func (u *RFIDUnit) run() {
 						// TODO give UI error response, and send cmdAlarmLeave to RFID
 						break
 					}
+					u.failedAlarmOn[r.Barcode] = r.Tag // Store tag id for potential retry
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 					u.state = UNITWaitForCheckinAlarmOn
 					rfidLogger.Infof("[%v] UNITCheckinWaitForAlarmOn", adr)
@@ -166,7 +179,20 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckin
 				rfidLogger.Infof("[%v] UNITCheckin", adr)
 				if !r.OK {
+					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
+				} else {
+					delete(u.failedAlarmOn, addLeading10(currentItem.Item.Barcode))
+					currentItem.Item.Status = ""
+					currentItem.Item.OK = true
+					// retry others if len(u.failedAlarm) > 0:
+					for _, v := range u.failedAlarmOn {
+						u.state = UNITWaitForCheckinAlarmOn
+						rfidLogger.Infof("[%v] UNITWaitForCheckinAlarmOn", adr)
+						r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
+						u.ToRFID <- r
+						break
+					}
 				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckinAlarmLeave:
@@ -313,8 +339,8 @@ func (u *RFIDUnit) run() {
 				u.state = UNITWriting
 				rfidLogger.Infof("[%v] UNITWriting", adr)
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdWrite,
-					WriteData: []byte(currentItem.Item.Barcode),
-					TagCount:  currentItem.Item.NumTags})
+					Data:     []byte(currentItem.Item.Barcode),
+					TagCount: currentItem.Item.NumTags})
 				u.ToRFID <- r
 			case UNITWriting:
 				if !r.OK {

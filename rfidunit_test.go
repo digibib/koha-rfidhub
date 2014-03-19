@@ -285,8 +285,36 @@ func TestCheckins(t *testing.T) {
 
 	msg = <-d.incoming
 	if string(msg) != "OK1\r" {
-		t.Errorf("Alarm didnt get turn on after checkin")
+		t.Errorf("Checkin: RFID reader didn't get instructed to turn on alarm")
 	}
+	// simulate failed alarm command
+	d.outgoing <- []byte("NOK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKIN",
+		Item: item{
+			Label:   "Heavy metal in Baghdad",
+			OK:      false,
+			Barcode: "03010824124004",
+			Date:    "26/02/2014",
+			Status:  "Feil: fikk ikke skrudd på alarm.",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct message after checkin")
+	}
+
+	// retry alarm on
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"RETRY-ALARM-ON"}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	msg = <-d.incoming
+	if string(msg) != "ACT1003010824124004:NO:02030000\r" {
+		t.Fatal("UI -> RETRY-ALARM-ON didn't trigger the right RFID command")
+	}
+
 	d.outgoing <- []byte("OK\r")
 
 	uiMsg = <-uiChan
@@ -299,7 +327,7 @@ func TestCheckins(t *testing.T) {
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
-		t.Fatal("UI didn't get the correct message after checkin")
+		t.Fatal("UI didn't get the correct message after checkin retry alarm on")
 	}
 
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets

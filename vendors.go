@@ -10,6 +10,7 @@ import (
 // deichmanVendor is the RFID-vendor used on Deichman's staff PCs.
 // http://it.deichman.no/projects/biblioteksystem/wiki/RFID-kommunikasjon
 type deichmanVendor struct {
+	buf       bytes.Buffer
 	WriteMode bool
 }
 
@@ -35,20 +36,26 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 		return []byte("OK0\r")
 	case cmdAlarmOn:
 		return []byte("OK1\r")
+	case cmdRetryAlarmOn:
+		v.buf.Reset()
+		v.buf.Write([]byte("ACT"))
+		v.buf.Write(r.Data)
+		v.buf.WriteByte('\r')
+		return v.buf.Bytes()
 	case cmdRereadTag:
 		return []byte("OKR\r")
 	case cmdTagCount:
 		return []byte("TGC\r")
 	case cmdWrite:
 		v.WriteMode = true
-		var b bytes.Buffer
+		v.buf.Reset()
 		i := strconv.Itoa(r.TagCount)
-		b.Write([]byte("WRT"))
-		b.Write(r.WriteData)
-		b.WriteByte('|')
-		b.WriteString(i)
-		b.Write([]byte("|0\r"))
-		return b.Bytes()
+		v.buf.Write([]byte("WRT"))
+		v.buf.Write(r.Data)
+		v.buf.WriteByte('|')
+		v.buf.WriteString(i)
+		v.buf.Write([]byte("|0\r"))
+		return v.buf.Bytes()
 	case cmdSLPLBN:
 		return []byte("SLPLBN|02030000\r")
 	case cmdSLPLBC:
