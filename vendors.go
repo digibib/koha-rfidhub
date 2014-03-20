@@ -73,7 +73,7 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 	}
 
 	// This can never be reached, given all cases of r.Cmd are covered above:
-	return []byte("OK\r")
+	panic("deichmanVendor.GenerateRFIDReq does not handle all commands!")
 }
 
 // ParseRFIDResp parses the RFID response.
