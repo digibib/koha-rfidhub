@@ -115,6 +115,7 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckinWaitForBegOK
 				rfidLogger.Debugf("[%v] UNITCheckinWaitForBegOK", adr)
 				u.vendor.Reset()
+				currentItem = UIMsg{}
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "CHECKOUT":
@@ -123,6 +124,7 @@ func (u *RFIDUnit) run() {
 				u.patron = uiReq.Patron
 				rfidLogger.Debugf("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.vendor.Reset()
+				currentItem = UIMsg{}
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "RETRY-ALARM-ON":
