@@ -14,6 +14,7 @@ const (
 	sipDateLayout = "20060102    150405"
 
 	// 93: Login (established SIP connection)
+	// TODO get username+password from config
 	sipMsg93 = "9300CNstresstest%d|COstresstest%d|CPDFB|\r"
 
 	// 63: Patron information request
@@ -30,11 +31,6 @@ const (
 )
 
 var sipLogger = loggo.GetLogger("sip")
-
-// TODO investigate SIP fileds, do Koha need them to be filled out?:
-// <terminalpassword>
-// <location>
-// <institutionid>
 
 func sipFormMsgAuthenticate(dept, username, pin string) string {
 	now := time.Now().Format(sipDateLayout)
