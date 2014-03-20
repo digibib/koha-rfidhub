@@ -113,43 +113,41 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 func checkinParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
-		ok     bool
+		fail   bool
 		status string
 		date   string
 	)
-	if a[2] == '1' {
-		ok = true
-	}
 	fields := pairFieldIDandValue(b)
 	if a[2] == '0' {
+		fail = true
 		status = fields["AF"]
 	} else {
 		date = fmt.Sprintf("%s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{OK: ok, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
+	return UIMsg{Action: "CHECKIN", Item: item{TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
-		ok           bool
+		fail         bool
 		status       string
 		checkoutDate string
 	)
 	fields := pairFieldIDandValue(b)
 	if a[2] == '1' {
-		ok = true
 		date := fields["AH"]
 		checkoutDate = fmt.Sprintf("%s/%s/%s", date[6:8], date[4:6], date[0:4])
 	} else {
+		fail = true
 		if fields["AF"] == "1" {
 			status = "Failed! Don't know why. I wish the SIP-server gave us more information..."
 		} else {
 			status = fields["AF"]
 		}
 	}
-	return UIMsg{Item: item{OK: ok, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
+	return UIMsg{Item: item{TransactionFailed: fail, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
 }
 
 func itemStatusParse(s string) UIMsg {
@@ -159,5 +157,5 @@ func itemStatusParse(s string) UIMsg {
 	if fields["AJ"] == "" {
 		unknown = true
 	}
-	return UIMsg{Item: item{OK: false, Barcode: fields["AB"], Unknown: unknown, Label: fields["AJ"]}}
+	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Unknown: unknown, Label: fields["AJ"]}}
 }

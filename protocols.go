@@ -68,17 +68,22 @@ type item struct {
 	Label   string
 	Barcode string
 	Date    string // Format: 10/03/2013
-	Status  string
+	Status  string // An error explanation or an error message passed on from SIP-server
 	NumTags int
-	Unknown bool // true if SIP server cant give any information
-	OK      bool // true if the transaction succeded
+
+	// Possible errors
+	Unknown           bool // true if SIP server cant give any information on a given barcode
+	TransactionFailed bool // true if the transaction failed
+	AlarmOnFailed     bool // true if it failed to turn on alarm
+	AlarmOffFailed    bool // true if it failed to turn off alarm
+	WriteFailed       bool // true if write to tag failed
 }
 
 // UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
-	Action    string // CHECKIN/CHECKOUT/CONNECT/WRITE/END
+	Action    string // CHECKIN/CHECKOUT/CONNECT/ITEM-INFO/RETRY-ALARM-ON/RETRY-ALARM-OFF/WRITE/END
 	Patron    string
-	RFIDError bool
-	SIPError  bool
+	RFIDError bool // true if RFID-reader is unavailable
+	SIPError  bool // true if SIP-server is unavailable
 	Item      item
 }

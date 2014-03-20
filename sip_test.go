@@ -126,14 +126,14 @@ func TestSIPCheckin(t *testing.T) {
 	res, err := DoSIPCall(p, sipFormMsgCheckin("HUTL", "03011143299001"), checkinParse)
 
 	s.ExpectNil(err)
-	s.Expect(true, res.Item.OK)
+	s.Expect(false, res.Item.TransactionFailed)
 	s.Expect("316 salmer og sanger", res.Item.Label)
 	s.Expect("24/01/2014", res.Item.Date)
 
 	p.initFn = fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r")
 	p.Init(1)
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
-	s.Expect(false, res.Item.OK)
+	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("Item not checked out", res.Item.Status)
 }
 
@@ -145,7 +145,7 @@ func TestSIPCheckout(t *testing.T) {
 	res, err := DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "03011174511003"), checkoutParse)
 
 	s.ExpectNil(err)
-	s.Expect(true, res.Item.OK)
+	s.Expect(false, res.Item.TransactionFailed)
 	s.Expect("Krutt-Kim", res.Item.Label)
 	s.Expect("21/02/2014", res.Item.Date)
 
@@ -154,7 +154,7 @@ func TestSIPCheckout(t *testing.T) {
 	res, err = DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "1234"), checkoutParse)
 
 	s.ExpectNil(err)
-	s.Expect(false, res.Item.OK)
+	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("Invalid Item", res.Item.Status)
 }
 
@@ -166,7 +166,7 @@ func TestSIPItemStatus(t *testing.T) {
 	res, err := DoSIPCall(p, sipFormMsgItemStatus("03010824124004"), itemStatusParse)
 
 	s.ExpectNil(err)
-	s.Expect(false, res.Item.OK)
+	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("Heavy metal in Baghdad", res.Item.Label)
 
 	p.initFn = fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r")
@@ -174,6 +174,6 @@ func TestSIPItemStatus(t *testing.T) {
 	res, err = DoSIPCall(p, sipFormMsgItemStatus("1003010856677001"), itemStatusParse)
 
 	s.ExpectNil(err)
-	s.Expect(false, res.Item.OK)
+	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect(true, res.Item.Unknown)
 }

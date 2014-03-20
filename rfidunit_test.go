@@ -294,7 +294,6 @@ func TestCheckins(t *testing.T) {
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:   "Heavy metal in Baghdad",
-			OK:      false,
 			Barcode: "03010824124004",
 			Date:    "26/02/2014",
 			Status:  "Feil: fikk ikke skrudd på alarm.",
@@ -321,7 +320,6 @@ func TestCheckins(t *testing.T) {
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
 			Label:   "Heavy metal in Baghdad",
-			OK:      true,
 			Barcode: "03010824124004",
 			Date:    "26/02/2014",
 		}}
@@ -345,10 +343,10 @@ func TestCheckins(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
-			Label:   "Heavy metal in Baghdad",
-			Barcode: "03010824124004",
-			OK:      false,
-			Status:  "IKKE innlevert",
+			Label:             "Heavy metal in Baghdad",
+			Barcode:           "03010824124004",
+			TransactionFailed: true,
+			Status:            "IKKE innlevert",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -429,10 +427,10 @@ func TestCheckouts(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
-			Label:   "Krutt-Kim",
-			OK:      false,
-			Barcode: "03011174511003",
-			Status:  "Item checked out to another patron",
+			Label:             "Krutt-Kim",
+			Barcode:           "03011174511003",
+			TransactionFailed: true,
+			Status:            "Item checked out to another patron",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -456,7 +454,6 @@ func TestCheckouts(t *testing.T) {
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
 			Label:   "Cat's cradle",
-			OK:      false,
 			Barcode: "03011063175001",
 			Date:    "31/03/2014",
 			Status:  "Feil: fikk ikke skrudd av alarm.",
@@ -484,7 +481,6 @@ func TestCheckouts(t *testing.T) {
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
 			Label:   "Cat's cradle",
-			OK:      true,
 			Barcode: "03011063175001",
 			Date:    "31/03/2014",
 		}}
@@ -584,7 +580,6 @@ func TestWriteLogic(t *testing.T) {
 	want := UIMsg{Action: "ITEM-INFO",
 		Item: item{
 			Label:   "Heavy metal in Baghdad",
-			OK:      true,
 			Barcode: "03010824124004",
 			NumTags: 2,
 		}}
@@ -666,7 +661,6 @@ func TestWriteLogic(t *testing.T) {
 	want = UIMsg{Action: "WRITE",
 		Item: item{
 			Label:   "Heavy metal in Baghdad",
-			OK:      true,
 			Barcode: "03010824124004",
 			NumTags: 2,
 			Status:  "OK, preget",

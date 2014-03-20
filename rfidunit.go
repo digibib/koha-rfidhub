@@ -208,12 +208,10 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckin
 				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				if !r.OK {
-					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
 				} else {
 					delete(u.failedAlarmOn, currentItem.Item.Barcode)
 					currentItem.Item.Status = ""
-					currentItem.Item.OK = true
 					// retry others if len(u.failedAlarm) > 0:
 					for _, v := range u.failedAlarmOn {
 						u.state = UNITWaitForCheckinAlarmOn
@@ -229,7 +227,7 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				currentItem.Item.Date = ""
 				currentItem.Item.Status = "IKKE innlevert"
-				currentItem.Item.OK = false
+				currentItem.Item.TransactionFailed = true
 				u.ToUI <- currentItem
 			case UNITCheckoutWaitForBegOK:
 				if !r.OK {
@@ -269,7 +267,7 @@ func (u *RFIDUnit) run() {
 						break
 					}
 					currentItem.Action = "CHECKOUT"
-					if !currentItem.Item.OK {
+					if currentItem.Item.TransactionFailed {
 						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 						u.state = UNITWaitForCheckoutAlarmLeave
 						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
@@ -285,12 +283,10 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 				if !r.OK {
 					// TODO unit-test for this
-					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd av alarm."
 				} else {
 					delete(u.failedAlarmOff, currentItem.Item.Barcode)
 					currentItem.Item.Status = ""
-					currentItem.Item.OK = true
 					// retry others if len(u.failedAlarmOff) > 0:
 					for _, v := range u.failedAlarmOff {
 						u.state = UNITWaitForCheckoutAlarmOff
@@ -312,7 +308,7 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 				u.ToUI <- currentItem
 			case UNITWaitForTagCount:
-				currentItem.Item.OK = r.OK
+				currentItem.Item.TransactionFailed = !r.OK
 				u.state = UNITIdle
 				rfidLogger.Debugf("[%v] UNITIdle", adr)
 				currentItem.Action = "ITEM-INFO"
