@@ -301,17 +301,16 @@ func (u *RFIDUnit) run() {
 				u.ToUI <- currentItem
 			case UNITWaitForCheckoutAlarmLeave:
 				if !r.OK {
-					// TODO quit
-					break
+					// I can't imagine the RFID-reader fails to leave the
+					// alarm in it current state. In any case, we continue
+					rfidLogger.Warningf("[%v] failed to leave alarm in current state", adr)
+					// TODO should we set currentItem.Item.OK to false?
 				}
 				u.state = UNITCheckout
 				rfidLogger.Debugf("[%v] UNITCheckout", adr)
-				//currentItem.Item.Status = "IKKE innlevert"
 				u.ToUI <- currentItem
 			case UNITWaitForTagCount:
-				if r.OK {
-					currentItem.Item.OK = true
-				}
+				currentItem.Item.OK = r.OK
 				u.state = UNITIdle
 				rfidLogger.Debugf("[%v] UNITIdle", adr)
 				currentItem.Action = "ITEM-INFO"
