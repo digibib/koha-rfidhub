@@ -293,10 +293,11 @@ func TestCheckins(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKIN",
 		Item: item{
-			Label:   "Heavy metal in Baghdad",
-			Barcode: "03010824124004",
-			Date:    "26/02/2014",
-			Status:  "Feil: fikk ikke skrudd på alarm.",
+			Label:         "Heavy metal in Baghdad",
+			Barcode:       "03010824124004",
+			Date:          "26/02/2014",
+			AlarmOnFailed: true,
+			Status:        "Feil: fikk ikke skrudd på alarm.",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -453,10 +454,11 @@ func TestCheckouts(t *testing.T) {
 	uiMsg = <-uiChan
 	want = UIMsg{Action: "CHECKOUT",
 		Item: item{
-			Label:   "Cat's cradle",
-			Barcode: "03011063175001",
-			Date:    "31/03/2014",
-			Status:  "Feil: fikk ikke skrudd av alarm.",
+			Label:          "Cat's cradle",
+			Barcode:        "03011063175001",
+			Date:           "31/03/2014",
+			AlarmOffFailed: true,
+			Status:         "Feil: fikk ikke skrudd av alarm.",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -587,6 +589,35 @@ func TestWriteLogic(t *testing.T) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
 		t.Fatal("UI didn't get the correct item info ")
 	}
+
+	// 1. failed write
+	err = a.c.WriteMessage(websocket.TextMessage,
+		[]byte(`{"Action":"WRITE", "Item": {"Barcode": "03010824124004", "NumTags": 2}}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	msg = <-d.incoming
+	if string(msg) != "SLPLBN|02030000\r" {
+		t.Fatal("WRITE command didn't initialize the reader properly")
+	}
+
+	d.outgoing <- []byte("NOK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "WRITE",
+		Item: item{
+			Label:       "Heavy metal in Baghdad",
+			Barcode:     "03010824124004",
+			WriteFailed: true,
+			NumTags:     2,
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct message of failed write ")
+	}
+
+	// 2. succesfull write
 
 	err = a.c.WriteMessage(websocket.TextMessage,
 		[]byte(`{"Action":"WRITE", "Item": {"Barcode": "03010824124004", "NumTags": 2}}`))

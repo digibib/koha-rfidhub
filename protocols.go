@@ -77,6 +77,7 @@ type item struct {
 	AlarmOnFailed     bool // true if it failed to turn on alarm
 	AlarmOffFailed    bool // true if it failed to turn off alarm
 	WriteFailed       bool // true if write to tag failed
+	TagCountFailed    bool // true if mismatch between expected number of tags and found tags
 }
 
 // UIMsg is a message to or from Koha's user interface.

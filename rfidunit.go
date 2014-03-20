@@ -107,6 +107,7 @@ func (u *RFIDUnit) run() {
 			case "WRITE":
 				u.state = UNITPreWriteStep1
 				rfidLogger.Debugf("[%v] UNITPreWriteStep1", adr)
+				currentItem.Action = "WRITE"
 				currentItem.Item.NumTags = uiReq.Item.NumTags
 				u.vendor.Reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdSLPLBN})
@@ -208,9 +209,11 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckin
 				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				if !r.OK {
+					currentItem.Item.AlarmOnFailed = true
 					currentItem.Item.Status = "Feil: fikk ikke skrudd på alarm."
 				} else {
 					delete(u.failedAlarmOn, currentItem.Item.Barcode)
+					currentItem.Item.AlarmOnFailed = false
 					currentItem.Item.Status = ""
 					// retry others if len(u.failedAlarm) > 0:
 					for _, v := range u.failedAlarmOn {
@@ -283,10 +286,12 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Debugf("[%v] UNITCheckout", adr)
 				if !r.OK {
 					// TODO unit-test for this
+					currentItem.Item.AlarmOffFailed = true
 					currentItem.Item.Status = "Feil: fikk ikke skrudd av alarm."
 				} else {
 					delete(u.failedAlarmOff, currentItem.Item.Barcode)
 					currentItem.Item.Status = ""
+					currentItem.Item.AlarmOffFailed = false
 					// retry others if len(u.failedAlarmOff) > 0:
 					for _, v := range u.failedAlarmOff {
 						u.state = UNITWaitForCheckoutAlarmOff
@@ -316,7 +321,8 @@ func (u *RFIDUnit) run() {
 				u.ToUI <- currentItem
 			case UNITPreWriteStep1:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -327,7 +333,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep2:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -338,7 +345,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep3:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -349,7 +357,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep4:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -360,7 +369,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep5:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -371,7 +381,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep6:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -382,7 +393,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep7:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -393,7 +405,8 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITPreWriteStep8:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -403,8 +416,9 @@ func (u *RFIDUnit) run() {
 					// expected number assigned in the UI.
 					errMsg := fmt.Sprintf("forventet %d brikke(r), men fant %d.",
 						currentItem.Item.NumTags, r.TagCount)
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true,
-						Item: item{Status: errMsg}}
+					currentItem.Item.Status = errMsg
+					currentItem.Item.TagCountFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
@@ -417,14 +431,15 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case UNITWriting:
 				if !r.OK {
-					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					currentItem.Item.WriteFailed = true
+					u.ToUI <- currentItem
 					u.state = UNITIdle
 					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITIdle
 				rfidLogger.Debugf("[%v] UNITIdle", adr)
-				currentItem.Action = "WRITE"
+				currentItem.Item.WriteFailed = false
 				currentItem.Item.Status = "OK, preget"
 				u.ToUI <- currentItem
 			}
