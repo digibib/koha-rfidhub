@@ -133,6 +133,14 @@ func (u *RFIDUnit) run() {
 					u.ToRFID <- r
 					break // Remaining will be triggered in case UNITWaitForCheckinAlarmOn
 				}
+			case "RETRY-ALARM-OFF":
+				u.state = UNITWaitForCheckoutAlarmOff
+				rfidLogger.Debugf("[%v] UNITWaitForCheckoutAlarmOff", adr)
+				for _, v := range u.failedAlarmOff {
+					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOff, Data: []byte(v)})
+					u.ToRFID <- r
+					break // Remaining will be triggered in case UNITWaitForCheckoutAlarmOff
+				}
 			}
 		case msg := <-u.FromRFID:
 			r, err := u.vendor.ParseRFIDResp(msg)
@@ -265,6 +273,7 @@ func (u *RFIDUnit) run() {
 						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
 						break
 					}
+					u.failedAlarmOff[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
 					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOff})
 					u.state = UNITWaitForCheckoutAlarmOff
 					rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmOff", adr)
@@ -276,6 +285,18 @@ func (u *RFIDUnit) run() {
 					// TODO unit-test for this
 					currentItem.Item.OK = false
 					currentItem.Item.Status = "Feil: fikk ikke skrudd av alarm."
+				} else {
+					delete(u.failedAlarmOff, currentItem.Item.Barcode)
+					currentItem.Item.Status = ""
+					currentItem.Item.OK = true
+					// retry others if len(u.failedAlarmOff) > 0:
+					for _, v := range u.failedAlarmOff {
+						u.state = UNITWaitForCheckoutAlarmOff
+						rfidLogger.Debugf("[%v] UNITWaitForCheckoutAlarmOff", adr)
+						r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOff, Data: []byte(v)})
+						u.ToRFID <- r
+						break
+					}
 				}
 				u.ToUI <- currentItem
 			case UNITWaitForCheckoutAlarmLeave:

@@ -423,6 +423,7 @@ func TestCheckouts(t *testing.T) {
 	if string(msg) != "OK \r" {
 		t.Errorf("Alarm was changed after unsuccessful checkout")
 	}
+
 	d.outgoing <- []byte("OK\r")
 
 	uiMsg = <-uiChan
@@ -446,6 +447,35 @@ func TestCheckouts(t *testing.T) {
 	msg = <-d.incoming
 	if string(msg) != "OK0\r" {
 		t.Errorf("Alarm was not turned off after successful checkout")
+	}
+
+	// simulate failed alarm
+	d.outgoing <- []byte("NOK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKOUT",
+		Item: item{
+			Label:   "Cat's cradle",
+			OK:      false,
+			Barcode: "03011063175001",
+			Date:    "31/03/2014",
+			Status:  "Feil: fikk ikke skrudd av alarm.",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+		t.Fatal("UI didn't get the correct message after succesfull checkout")
+	}
+
+	// retry alarm off
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"RETRY-ALARM-OFF"}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	msg = <-d.incoming
+	if string(msg) != "DAC1003011063175001:NO:02030000\r" {
+		t.Errorf("Got %q, Want DAC1003011063175001:NO:02030000", msg)
+		t.Fatal("UI -> RETRY-ALARM-ON didn't trigger the right RFID command")
 	}
 
 	d.outgoing <- []byte("OK\r")

@@ -42,6 +42,12 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 		v.buf.Write(r.Data)
 		v.buf.WriteByte('\r')
 		return v.buf.Bytes()
+	case cmdRetryAlarmOff:
+		v.buf.Reset()
+		v.buf.Write([]byte("DAC"))
+		v.buf.Write(r.Data)
+		v.buf.WriteByte('\r')
+		return v.buf.Bytes()
 	case cmdRereadTag:
 		return []byte("OKR\r")
 	case cmdTagCount:
