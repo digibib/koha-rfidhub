@@ -320,6 +320,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep1:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep2
@@ -329,6 +331,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep2:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep3
@@ -338,6 +342,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep3:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep4
@@ -347,6 +353,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep4:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep5
@@ -356,6 +364,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep5:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep6
@@ -365,6 +375,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep6:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep7
@@ -374,6 +386,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep7:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITPreWriteStep8
@@ -383,6 +397,8 @@ func (u *RFIDUnit) run() {
 			case UNITPreWriteStep8:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				if r.TagCount != currentItem.Item.NumTags {
@@ -405,6 +421,8 @@ func (u *RFIDUnit) run() {
 			case UNITWriting:
 				if !r.OK {
 					u.ToUI <- UIMsg{Action: "WRITE", RFIDError: true}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
 					break
 				}
 				u.state = UNITIdle
