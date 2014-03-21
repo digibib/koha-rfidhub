@@ -329,6 +329,31 @@ func TestCheckins(t *testing.T) {
 		t.Fatal("UI didn't get the correct message after checkin retry alarm on")
 	}
 
+	// Simulate barcode not in our db
+
+	sipPool.initFn = fakeSIPResponse("100NUY20140128    114702AO|AB1234|CV99|AFItem not checked out|\r")
+	sipPool.Init(1)
+	d.outgoing <- []byte("RDT1234:NO:02030000|0\r")
+
+	msg = <-d.incoming
+	if string(msg) != "OK \r" {
+		t.Errorf("Alarm was changed after unsuccessful checkin")
+	}
+
+	d.outgoing <- []byte("OK\r")
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKIN",
+		Item: item{
+			Barcode:           "1234",
+			TransactionFailed: true,
+			Unknown:           true,
+			Status:            "strekkoden finnes ikke i basen",
+		}}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+	}
+
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
 	// notified with the books title, along with an error message
 	sipPool.initFn = fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r")
@@ -347,7 +372,6 @@ func TestCheckins(t *testing.T) {
 			Label:             "Heavy metal in Baghdad",
 			Barcode:           "03010824124004",
 			TransactionFailed: true,
-			Status:            "IKKE innlevert",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)

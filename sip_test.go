@@ -134,7 +134,7 @@ func TestSIPCheckin(t *testing.T) {
 	p.Init(1)
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
 	s.Expect(true, res.Item.TransactionFailed)
-	s.Expect("Item not checked out", res.Item.Status)
+	s.Expect("strekkoden finnes ikke i basen", res.Item.Status)
 }
 
 func TestSIPCheckout(t *testing.T) {

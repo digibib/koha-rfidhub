@@ -114,9 +114,10 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 func checkinParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
-		fail   bool
-		status string
-		date   string
+		fail    bool
+		status  string
+		date    string
+		unknown bool
 	)
 	fields := pairFieldIDandValue(b)
 	if a[2] == '0' {
@@ -125,8 +126,14 @@ func checkinParse(s string) UIMsg {
 	} else {
 		date = fmt.Sprintf("%s/%s/%s", a[12:14], a[10:12], a[6:10])
 	}
+	if fields["CV"] == "99" {
+		// The code CV99 seems to be invented by Koha's SIP server to indicate
+		// invalid item.. TODO check this with someone who knows.
+		unknown = true
+		status = "strekkoden finnes ikke i basen"
+	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
+	return UIMsg{Action: "CHECKIN", Item: item{Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {
@@ -135,6 +142,7 @@ func checkoutParse(s string) UIMsg {
 		fail         bool
 		status       string
 		checkoutDate string
+		unknown      bool
 	)
 	fields := pairFieldIDandValue(b)
 	if a[2] == '1' {
@@ -148,7 +156,10 @@ func checkoutParse(s string) UIMsg {
 			status = fields["AF"]
 		}
 	}
-	return UIMsg{Item: item{TransactionFailed: fail, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
+	if fields["AJ"] == "" {
+		unknown = true
+	}
+	return UIMsg{Item: item{Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
 }
 
 func itemStatusParse(s string) UIMsg {

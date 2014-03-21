@@ -207,9 +207,16 @@ func (u *RFIDUnit) run() {
 						break
 					}
 					u.failedAlarmOn[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
-					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
-					u.state = UNITWaitForCheckinAlarmOn
-					rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmOn", adr)
+					if currentItem.Item.Unknown || currentItem.Item.TransactionFailed {
+						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
+						u.state = UNITWaitForCheckinAlarmLeave
+						rfidLogger.Debugf("[%v] UNITWaitForCheckinAlarmLeave", adr)
+
+					} else {
+						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
+						u.state = UNITWaitForCheckinAlarmOn
+						rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmOn", adr)
+					}
 				}
 			case UNITWaitForCheckinAlarmOn:
 				u.state = UNITCheckin
@@ -235,8 +242,6 @@ func (u *RFIDUnit) run() {
 				u.state = UNITCheckin
 				rfidLogger.Debugf("[%v] UNITCheckin", adr)
 				currentItem.Item.Date = ""
-				currentItem.Item.Status = "IKKE innlevert"
-				currentItem.Item.TransactionFailed = true
 				u.ToUI <- currentItem
 			case UNITCheckoutWaitForBegOK:
 				if !r.OK {
