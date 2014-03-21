@@ -705,6 +705,54 @@ func TestWriteLogic(t *testing.T) {
 	d.c.Close()
 }
 
+func TestUserErrors(t *testing.T) {
+	sipPool.initFn = FailingSIPResponse()
+	sipPool.Init(1)
+	var d = newDummyRFID()
+	go d.run()
+	a := newDummyUIAgent()
+	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
+	if err != nil {
+		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
+	}
+	a.c = ws
+	go a.run(uiChan)
+
+	d.outgoing <- []byte("OK\r")
+
+	_ = <-uiChan
+
+	err = a.c.WriteMessage(websocket.TextMessage,
+		[]byte(`{"Action":"BLA", "this is not well formed json }`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	uiMsg := <-uiChan
+	want := UIMsg{Action: "CONNECT", UserError: true,
+		ErrorMessage: "Failed to parse the JSON request: unexpected end of JSON input"}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+	}
+
+	// Attemp CHECKOUT without sending the patron barcode
+	err = a.c.WriteMessage(websocket.TextMessage,
+		[]byte(`{"Action":"CHECKOUT"}`))
+	if err != nil {
+		t.Fatal("UI failed to send message over websokcet conn")
+	}
+
+	uiMsg = <-uiChan
+	want = UIMsg{Action: "CHECKOUT", UserError: true,
+		ErrorMessage: "Patron not supplied"}
+	if !reflect.DeepEqual(uiMsg, want) {
+		t.Errorf("Got %+v; want %+v", uiMsg, want)
+	}
+
+	a.c.Close()
+	d.c.Close()
+}
+
 /*
 // Verify that if a second websocket connection is opened from the same IP,
 // the first connection is closed.

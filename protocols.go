@@ -82,9 +82,11 @@ type item struct {
 
 // UIMsg is a message to or from Koha's user interface.
 type UIMsg struct {
-	Action    string // CHECKIN/CHECKOUT/CONNECT/ITEM-INFO/RETRY-ALARM-ON/RETRY-ALARM-OFF/WRITE/END
-	Patron    string
-	RFIDError bool // true if RFID-reader is unavailable
-	SIPError  bool // true if SIP-server is unavailable
-	Item      item
+	Action       string // CHECKIN/CHECKOUT/CONNECT/ITEM-INFO/RETRY-ALARM-ON/RETRY-ALARM-OFF/WRITE/END
+	Patron       string // Patron username/barcode
+	RFIDError    bool   // true if RFID-reader is unavailable
+	SIPError     bool   // true if SIP-server is unavailable
+	UserError    bool   // true if user is not using the API correctly
+	ErrorMessage string // textual description of the error
+	Item         item
 }

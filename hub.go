@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 
 	"github.com/gorilla/websocket"
@@ -174,7 +175,9 @@ func (c *uiConn) reader() {
 		var m UIMsg
 		err = json.Unmarshal(msg, &m)
 		if err != nil {
-			hubLogger.Errorf("failed to unmarshal JSON: %q", msg)
+			hubLogger.Warningf("UI[%v] failed to unmarshal JSON: %q", addr2IP(c.ws.RemoteAddr().String()), msg)
+			c.send <- UIMsg{Action: "CONNECT", UserError: true,
+				ErrorMessage: fmt.Sprintf("Failed to parse the JSON request: %v", err)}
 			continue
 		}
 		hubLogger.Infof("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)

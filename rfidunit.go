@@ -120,8 +120,14 @@ func (u *RFIDUnit) run() {
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
 				u.ToRFID <- r
 			case "CHECKOUT":
+				if uiReq.Patron == "" {
+					u.ToUI <- UIMsg{Action: "CHECKOUT",
+						UserError: true, ErrorMessage: "Patron not supplied"}
+					u.state = UNITIdle
+					rfidLogger.Debugf("[%v] UNITIdle", adr)
+					break
+				}
 				u.state = UNITCheckoutWaitForBegOK
-				// TODO return error if Patron == ""
 				u.patron = uiReq.Patron
 				rfidLogger.Debugf("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.vendor.Reset()
