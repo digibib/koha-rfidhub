@@ -281,7 +281,7 @@ func (u *RFIDUnit) run() {
 						break
 					}
 					currentItem.Action = "CHECKOUT"
-					if currentItem.Item.TransactionFailed {
+					if currentItem.Item.Unknown || currentItem.Item.TransactionFailed {
 						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 						u.state = UNITWaitForCheckoutAlarmLeave
 						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
