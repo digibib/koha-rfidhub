@@ -221,7 +221,7 @@ func (u *RFIDUnit) run() {
 					delete(u.failedAlarmOn, currentItem.Item.Barcode)
 					currentItem.Item.AlarmOnFailed = false
 					currentItem.Item.Status = ""
-					// retry others if len(u.failedAlarm) > 0:
+					// retry others if len(u.failedAlarmOn) > 0:
 					for _, v := range u.failedAlarmOn {
 						u.state = UNITWaitForCheckinAlarmOn
 						rfidLogger.Debugf("[%v] UNITWaitForCheckinAlarmOn", adr)
@@ -313,7 +313,6 @@ func (u *RFIDUnit) run() {
 					// I can't imagine the RFID-reader fails to leave the
 					// alarm in it current state. In any case, we continue
 					rfidLogger.Warningf("[%v] failed to leave alarm in current state", adr)
-					// TODO should we set currentItem.Item.OK to false?
 				}
 				u.state = UNITCheckout
 				rfidLogger.Debugf("[%v] UNITCheckout", adr)
@@ -418,7 +417,7 @@ func (u *RFIDUnit) run() {
 					break
 				}
 				if r.TagCount != currentItem.Item.NumTags {
-					// mismatch between number of tags on the RFID-reader and
+					// Mismatch between number of tags on the RFID-reader and
 					// expected number assigned in the UI.
 					errMsg := fmt.Sprintf("forventet %d brikke(r), men fant %d.",
 						currentItem.Item.NumTags, r.TagCount)
@@ -451,7 +450,6 @@ func (u *RFIDUnit) run() {
 			}
 
 		case <-u.Quit:
-			// cleanup
 			close(u.ToRFID)
 			rfidLogger.Infof("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
 			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})

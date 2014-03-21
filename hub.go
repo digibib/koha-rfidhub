@@ -183,6 +183,7 @@ func (c *uiConn) reader() {
 		hubLogger.Infof("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)
 		if c.unit != nil {
 			if c.unit.state == UNITOff {
+				// TODO log warning? (UI is not aware of state-machine stopped)
 				c.unit = nil
 				continue
 			}

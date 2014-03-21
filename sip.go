@@ -110,6 +110,7 @@ func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 // 	return UIMsg{Action: "LOGIN", Authenticated: auth, PatronID: fields["AA"], PatronName: fields["AE"]}
 // }
 
+// TODO make parsefunctions more robust. What if len(s) < 24?
 func checkinParse(s string) UIMsg {
 	a, b := s[:24], s[24:]
 	var (
