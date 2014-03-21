@@ -163,11 +163,15 @@ func checkoutParse(s string) UIMsg {
 }
 
 func itemStatusParse(s string) UIMsg {
-	var unknown bool
+	var (
+		unknown bool
+		status  string
+	)
 	_, b := s[:26], s[26:]
 	fields := pairFieldIDandValue(b)
 	if fields["AJ"] == "" {
 		unknown = true
+		status = "strekkoden finnes ikke i basen"
 	}
-	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Unknown: unknown, Label: fields["AJ"]}}
+	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Status: status, Unknown: unknown, Label: fields["AJ"]}}
 }
