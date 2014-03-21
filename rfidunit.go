@@ -472,7 +472,11 @@ func (u *RFIDUnit) tcpReader() {
 	for {
 		msg, err := r.ReadBytes('\r')
 		if err != nil {
-			// err = io.EOF
+			if u.state != UNITOff {
+				rfidLogger.Errorf("[%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
+				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+				u.Quit <- true
+			}
 			break
 		}
 		rfidLogger.Infof("<- [%v] %q", u.conn.RemoteAddr().String(), msg)
@@ -486,13 +490,21 @@ func (u *RFIDUnit) tcpWriter() {
 	for msg := range u.ToRFID {
 		_, err := w.Write(msg)
 		if err != nil {
-			rfidLogger.Warningf(err.Error())
+			if u.state != UNITOff {
+				rfidLogger.Errorf("[%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
+				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+				u.Quit <- true
+			}
 			break
 		}
 		rfidLogger.Infof("-> [%v] %q", u.conn.RemoteAddr().String(), msg)
 		err = w.Flush()
 		if err != nil {
-			rfidLogger.Warningf(err.Error())
+			if u.state != UNITOff {
+				rfidLogger.Errorf("[%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
+				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+				u.Quit <- true
+			}
 			break
 		}
 	}
