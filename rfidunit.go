@@ -221,14 +221,13 @@ func (u *RFIDUnit) run() {
 						// TODO give UI error response, and send cmdAlarmLeave to RFID
 						break
 					}
-					u.items[stripLeading10(r.Barcode)] = u.currentItem
-					u.failedAlarmOn[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
 					if u.currentItem.Item.Unknown || u.currentItem.Item.TransactionFailed {
 						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmLeave})
 						u.state = UNITWaitForCheckinAlarmLeave
 						rfidLogger.Debugf("[%v] UNITWaitForCheckinAlarmLeave", adr)
-
 					} else {
+						u.items[stripLeading10(r.Barcode)] = u.currentItem
+						u.failedAlarmOn[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
 						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOn})
 						u.state = UNITWaitForCheckinAlarmOn
 						rfidLogger.Debugf("[%v] UNITCheckinWaitForAlarmOn", adr)
@@ -319,12 +318,13 @@ func (u *RFIDUnit) run() {
 						u.state = UNITWaitForCheckoutAlarmLeave
 						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmLeave", adr)
 						break
+					} else {
+						u.items[stripLeading10(r.Barcode)] = u.currentItem
+						u.failedAlarmOff[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
+						u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOff})
+						u.state = UNITWaitForCheckoutAlarmOff
+						rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmOff", adr)
 					}
-					u.items[stripLeading10(r.Barcode)] = u.currentItem
-					u.failedAlarmOff[stripLeading10(r.Barcode)] = r.Tag // Store tag id for potential retry
-					u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdAlarmOff})
-					u.state = UNITWaitForCheckoutAlarmOff
-					rfidLogger.Debugf("[%v] UNITCheckoutNWaitForAlarmOff", adr)
 				}
 			case UNITWaitForCheckoutAlarmOff:
 				u.state = UNITCheckout
