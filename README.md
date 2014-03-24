@@ -2,9 +2,7 @@
 A server to manage checkins and checkouts in Koha using RFID-equipment.
 
 ## Status
-    20.03.2014 Write to tags working + Retry failed alarm commands
-    13.03.2014 Checkins/checkouts tested and confirmed working
-    27.02.2014 Under develpoment - not stable or usable yet
+    24.03.2014 Functionally complete. Time for QA, + function and integration tests.
 
 ## Description
 
@@ -48,4 +46,4 @@ __A__: Yes. But bear in mind that a barcode scanner will "hit enter" and force t
 * Find the best way to make error and status messages translatable
 * Improve test coverage
 * Error handling QA
-* Monitoring of connected clients (/.status endpoint)
+* Maybe: Monitoring of connected clients (/.status endpoint)
