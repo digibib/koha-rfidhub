@@ -19,6 +19,9 @@ todo:
 	@grep -rn TODO *.go || true
 	@grep -rn println *.go || true
 
+package: build
+	tar -cvzf koha-rfidhub.tar.gz koha-rfidhub
+
 test:
 	@go test -i
 	@go test --race
