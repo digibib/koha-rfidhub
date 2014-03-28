@@ -16,6 +16,7 @@ var (
 	sipPool *ConnPool
 	hub     *Hub
 	logger  = loggo.GetLogger("main")
+	status  *appMetrics
 )
 
 // APPLICATION ENTRY POINT
@@ -45,6 +46,7 @@ func main() {
 	}
 
 	hub = newHub()
+	status = registerMetrics()
 
 	// START SERVICES
 
@@ -55,6 +57,7 @@ func main() {
 	logger.Infof("Starting Websocket hub")
 	go hub.run()
 
+	http.HandleFunc("/.status", statusHandler)
 	http.HandleFunc("/ws", wsHandler)
 
 	logger.Infof("Starting HTTP server, listening at port %v", cfg.HTTPPort)

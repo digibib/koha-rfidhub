@@ -101,13 +101,16 @@ func init() {
 	//loggo.RemoveWriter("default")
 
 	// setup & start the hub
-	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string)}
+	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
+		Clients: []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}}}
 	sipPool = NewSIPConnPool(0)
 	uiChan = make(chan UIMsg)
 	hub = newHub()
+	status = registerMetrics()
 
 	go hub.run()
 	http.HandleFunc("/ws", wsHandler)
+	http.HandleFunc("/.status", statusHandler)
 	go http.ListenAndServe("127.0.0.1:8888", nil)
 }
 

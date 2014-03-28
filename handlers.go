@@ -1,10 +1,20 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/websocket"
 )
+
+func statusHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := json.Marshal(status.Export())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(b)
+}
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	ws, err := websocket.Upgrade(w, r, nil, 1024, 1024)
@@ -23,6 +33,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		hub.uiUnReg <- c
 	}()
+
+	// Count as connected
+	status.ClientsConnected.Inc(1)
+
 	go c.writer()
 	c.reader()
+
+	// Count as disconnected
+	status.ClientsConnected.Dec(1)
 }

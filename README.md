@@ -43,7 +43,7 @@ __A__: Yes. But bear in mind that a barcode scanner will "hit enter" and force t
 
 
 ## TODOs
-* Find the best way to make error and status messages translatable
-* Improve test coverage
 * Error handling QA
-* Maybe: Monitoring of connected clients (/.status endpoint)
+* Add more metrics and expose tot he status endpoint
+* Improve test coverage
+* Find the best way to make error and status messages translatable
