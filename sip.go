@@ -118,6 +118,7 @@ func checkinParse(s string) UIMsg {
 		status  string
 		date    string
 		unknown bool
+		branch  string
 	)
 	fields := pairFieldIDandValue(b)
 	if a[2] == '0' {
@@ -132,8 +133,13 @@ func checkinParse(s string) UIMsg {
 		unknown = true
 		status = "strekkoden finnes ikke i basen"
 	}
+	// Transfer either to holding branch or home branch
+	branch, ok := fields["CT"]
+	if !ok {
+		branch = fields["AQ"]
+	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
+	return UIMsg{Action: "CHECKIN", Item: item{Transfer: branch, Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
 }
 
 func checkoutParse(s string) UIMsg {

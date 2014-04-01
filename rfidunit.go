@@ -151,6 +151,7 @@ func (u *RFIDUnit) run() {
 				rfidLogger.Debugf("[%v] UNITWaitForRetryAlarmOn", adr)
 				for k, v := range u.failedAlarmOn {
 					u.currentItem = u.items[k]
+					u.currentItem.Item.Transfer = ""
 					r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})
 					u.ToRFID <- r
 					break // Remaining will be triggered in case UNITWaitForRetryAlarmOn
@@ -244,6 +245,10 @@ func (u *RFIDUnit) run() {
 					u.currentItem.Item.AlarmOnFailed = false
 					u.currentItem.Item.Status = ""
 				}
+				// Discard branchcode if issuing branch is the same as target branch
+				if u.dept == u.currentItem.Item.Transfer {
+					u.currentItem.Item.Transfer = ""
+				}
 				u.ToUI <- u.currentItem
 			case UNITWaitForRetryAlarmOn:
 				if !r.OK {
@@ -259,6 +264,7 @@ func (u *RFIDUnit) run() {
 				if len(u.failedAlarmOn) > 0 {
 					for k, v := range u.failedAlarmOn {
 						u.currentItem = u.items[k]
+						u.currentItem.Item.Transfer = ""
 						u.state = UNITWaitForRetryAlarmOn
 						rfidLogger.Debugf("[%v] UNITWaitForCheckoutAlarmOn", adr)
 						r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdRetryAlarmOn, Data: []byte(v)})

@@ -102,7 +102,9 @@ func init() {
 
 	// setup & start the hub
 	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
-		Clients: []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}}}
+		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},
+		FallBackBranch: "ukjent",
+	}
 	sipPool = NewSIPConnPool(0)
 	uiChan = make(chan UIMsg)
 	hub = newHub()
@@ -282,7 +284,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
 	// SIP, the Alarm turned on, and that UI get's notified of the transaction
-	sipPool.initFn = fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|AA2|CS927.8|\r")
+	sipPool.initFn = fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|CTfbol|AA2|CS927.8|\r")
 	sipPool.Init(1)
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|0\r")
 
@@ -300,6 +302,7 @@ func TestCheckins(t *testing.T) {
 			Barcode:       "03010824124004",
 			Date:          "26/02/2014",
 			AlarmOnFailed: true,
+			Transfer:      "fbol",
 			Status:        "Feil: fikk ikke skrudd på alarm.",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
