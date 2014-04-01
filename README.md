@@ -44,6 +44,6 @@ __A__: Yes. But bear in mind that a barcode scanner will "hit enter" and force t
 
 ## TODOs
 * Error handling QA
-* Add more metrics and expose tot he status endpoint
+* Add more metrics and expose to the status endpoint
 * Improve test coverage
 * Find the best way to make error and status messages translatable
