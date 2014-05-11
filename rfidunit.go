@@ -165,6 +165,7 @@ func (u *RFIDUnit) run() {
 					u.ToRFID <- r
 					break // Remaining will be triggered in case UNITWaitForRetryAlarmOff
 				}
+				// TODO default case -> ERROR
 			}
 		case msg := <-u.FromRFID:
 			r, err := u.vendor.ParseRFIDResp(msg)
@@ -508,6 +509,7 @@ func (u *RFIDUnit) run() {
 				u.currentItem.Item.WriteFailed = false
 				u.currentItem.Item.Status = "OK, preget"
 				u.ToUI <- u.currentItem
+				// TODO default case -> ERROR
 			}
 
 		case <-u.Quit:
