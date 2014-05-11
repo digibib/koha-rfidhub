@@ -8,6 +8,10 @@ build:
 	@export GOBIN=$(shell pwd)
 	@go build
 
+deps:
+	go get -d -v ./...
+	go list -f '{{range .TestImports}}{{.}} {{end}}' ./... | xargs -n1 go get -d
+
 profile: build
 	go test -run none -bench . -cpuprofile=prof.out
 	go tool pprof ./koha-rfidhub ./prof.out
@@ -22,9 +26,9 @@ todo:
 package: build
 	tar -cvzf koha-rfidhub.tar.gz koha-rfidhub
 
-test:
+test: deps
 	@go test -i
-	@go test --race
+	@go test
 
 integration:
 	@go test -tags integration
