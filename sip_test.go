@@ -135,6 +135,12 @@ func TestSIPCheckin(t *testing.T) {
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
 	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("strekkoden finnes ikke i basen", res.Item.Status)
+
+	p.initFn = fakeSIPResponse("100YNY20140511    092216AOGRY|AB03010013753001|AQhutl|AJHeksenes historie|CS272 And|CTfroa|CY11|DAåsen|CV02|AFItem not checked out|\r")
+	p.Init(1)
+	res, err = DoSIPCall(p, sipFormMsgCheckin("hutl", "03010013753001"), checkinParse)
+	s.ExpectNil(err)
+	s.Expect("froa", res.Item.Transfer)
 }
 
 func TestSIPCheckout(t *testing.T) {
