@@ -5,8 +5,6 @@ import (
 	"os"
 
 	"github.com/loggo/loggo"
-
-	_ "net/http/pprof"
 )
 
 // APPLICATION STATE
