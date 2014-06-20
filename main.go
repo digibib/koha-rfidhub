@@ -26,8 +26,8 @@ func main() {
 		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
-			SIPServer:         "knakk:6001",
-			NumSIPConnections: 5,
+			SIPServer:         "localhost:6001",
+			NumSIPConnections: 3,
 			FallBackBranch:    "ukjent",
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
@@ -47,10 +47,11 @@ func main() {
 	status = registerMetrics()
 
 	// START SERVICES
-
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
-	sipPool = NewSIPConnPool(cfg.NumSIPConnections)
-	go sipPool.Monitor()
+	sipPool, err = NewSIPConnPool(1, cfg.NumSIPConnections, initSIPConn)
+	if err != nil {
+		logger.Errorf(err.Error())
+	}
 
 	logger.Infof("Starting Websocket hub")
 	go hub.run()

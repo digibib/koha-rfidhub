@@ -33,9 +33,8 @@ func initFakeConn(i interface{}) (net.Conn, error) {
 func TestConnectionPool(t *testing.T) {
 	s := specs.New(t)
 
-	p := &ConnPool{}
-	p.initFn = initFakeConn
-	p.Init(2)
+	p, err := NewSIPConnPool(2, 2, initFakeConn)
+	s.ExpectNil(err)
 	s.Expect(2, p.Size())
 
 	conn := p.Get()
@@ -75,37 +74,5 @@ func TestConnectionPool(t *testing.T) {
 	case <-ch:
 	default:
 		t.Fail()
-	}
-}
-
-func TestPoolMonitoring(t *testing.T) {
-	p := &ConnPool{}
-	p.initFn = initFakeConn
-	p.Init(2)
-	go p.Monitor()
-	if p.Size() != 2 {
-		t.Errorf("ConnPool.Size() => %d, expected 2", p.Size())
-	}
-
-	c := p.Get()
-	c2 := p.Get()
-	if p.Size() != 0 {
-		t.Errorf("ConnPool.Size() => %d, expected 0", p.Size())
-	}
-
-	p.lost <- c
-
-	time.Sleep(10 * time.Millisecond)
-
-	if p.Size() != 1 {
-		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
-	}
-	p.initFn = ErrorSIPResponse() // Triggers race condition, but we don't mind
-	p.lost <- c2                  // because we never change initFn in production use.
-
-	time.Sleep(10 * time.Millisecond)
-
-	if p.Size() != 1 {
-		t.Errorf("ConnPool.Size() => %d, expected 1", p.Size())
 	}
 }

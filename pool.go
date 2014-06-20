@@ -24,36 +24,29 @@ type InitFunction func(interface{}) (net.Conn, error)
 type ConnPool struct {
 	// read from this channel to get an connection
 	conn chan SIPConn
-	// send disconnected connections to this channel
-	lost chan SIPConn
 	// fn to initialize the connection
 	initFn InitFunction
 }
 
-// Init sets up <size> connections
-func (p *ConnPool) Init(size int) {
-	p.conn = make(chan SIPConn, size)
-	p.lost = make(chan SIPConn, size)
-	for i := 1; i <= size; i++ {
+// NewSIPConnPool creates a new pool, given initial and maximum capacity, and
+// a factory function
+func NewSIPConnPool(initialCap, maxCap int, factory InitFunction) (*ConnPool, error) {
+	if initialCap <= 0 || maxCap <= 0 || initialCap > maxCap {
+		return nil, errors.New("invalid capacity settings")
+	}
+	p := &ConnPool{}
+	p.initFn = factory
+	p.conn = make(chan SIPConn, maxCap)
+	for i := 1; i <= initialCap; i++ {
 		conn := SIPConn{id: i}
 		c, err := p.initFn(i)
 		if err != nil {
-			p.lost <- conn
-			continue
+			return nil, fmt.Errorf("unable to fill the SIP pool: %s", err)
 		}
 		conn.c = c
 		p.conn <- conn
 	}
-}
-
-// NewSIPConnPool creates a new pool with <size> SIP connections. There is no
-// guarantee that it succeedes; the user must call Size() to be sure there are
-// any.
-func NewSIPConnPool(size int) *ConnPool {
-	p := &ConnPool{}
-	p.initFn = initSIPConn
-	p.Init(size)
-	return p
+	return p, nil
 }
 
 // Get a connection from the pool.
@@ -66,25 +59,12 @@ func (p *ConnPool) Release(c SIPConn) {
 	p.conn <- c
 }
 
-// Monitor tries re-connect any disconnected connections. Meant to be run in
-// its own goroutine.
-func (p *ConnPool) Monitor() {
-	for conn := range p.lost {
-		c, err := p.initFn(conn.id)
-		if err != nil {
-			p.lost <- conn
-			continue
-		}
-		conn.c = c
-		p.conn <- conn
-	}
-}
-
 // Size returns the (aprox) number of connections currently in the pool.
 func (p *ConnPool) Size() int {
 	return len(p.conn)
 }
 
+// initSIPConn is the default factory function for creatin a SIP connection.
 func initSIPConn(i interface{}) (net.Conn, error) {
 	conn, err := net.Dial("tcp", cfg.SIPServer)
 	if err != nil {

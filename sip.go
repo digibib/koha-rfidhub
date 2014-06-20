@@ -72,14 +72,13 @@ type parserFunc func(string) UIMsg
 func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
 	conn := p.Get()
-	defer p.Release(conn)
 
 	// 1. Send the SIP request
 	_, err := conn.c.Write([]byte(req))
 	if err != nil {
-		p.lost <- conn // assume it is disconnected
 		return UIMsg{}, err
 	}
+	defer p.Release(conn)
 
 	sipLogger.Infof("-> %v", strings.TrimSpace(req))
 
