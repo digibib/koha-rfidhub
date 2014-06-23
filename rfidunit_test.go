@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/fatih/pool"
 	"github.com/gorilla/websocket"
 	"github.com/loggo/loggo"
 )
@@ -105,7 +106,7 @@ func init() {
 		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},
 		FallBackBranch: "ukjent",
 	}
-	sipPool, _ = NewSIPConnPool(1, 1, initFakeConn)
+	sipPool, _ = pool.New(1, 1, initFakeConn)
 
 	uiChan = make(chan UIMsg)
 	hub = newHub()
@@ -118,7 +119,7 @@ func init() {
 }
 
 func TestMissingRFIDUnit(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 	a := newDummyUIAgent()
 	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
 	if err != nil {
@@ -138,7 +139,7 @@ func TestMissingRFIDUnit(t *testing.T) {
 }
 
 func TestRFIDUnitInitVersionFailure(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
 
@@ -170,7 +171,7 @@ func TestRFIDUnitInitVersionFailure(t *testing.T) {
 }
 
 func TestUnavailableSIPServer(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
 	a := newDummyUIAgent()
@@ -235,7 +236,7 @@ func TestEmptySIPConnPool(t *testing.T) {
 */
 
 func TestCheckins(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 
 	// Create & start the dummy RFID tcp server
 	var d = newDummyRFID()
@@ -284,7 +285,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
 	// SIP, the Alarm turned on, and that UI get's notified of the transaction
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|CTfbol|AA2|CS927.8|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|CTfbol|AA2|CS927.8|\r"))
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -336,7 +337,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate barcode not in our db
 
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB1234|CV99|AFItem not checked out|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB1234|CV99|AFItem not checked out|\r"))
 	d.outgoing <- []byte("RDT1234:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -360,7 +361,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
 	// notified with the books title, along with an error message
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	msg = <-d.incoming
@@ -397,7 +398,7 @@ func TestCheckins(t *testing.T) {
 }
 
 func TestCheckouts(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 	var d = newDummyRFID()
 	go d.run()
 	a := newDummyUIAgent()
@@ -440,7 +441,7 @@ func TestCheckouts(t *testing.T) {
 
 	// Simulate book on RFID-unit, but SIP show that book is allready checked out.
 	// Verify that UI gets notified with the books title, along with an error message
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("120NUN20140303    102741AOHUTL|AA95|AB03011174511003|AJKrutt-Kim|AH|AFItem checked out to another patron|BLY|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("120NUN20140303    102741AOHUTL|AA95|AB03011174511003|AJKrutt-Kim|AH|AFItem checked out to another patron|BLY|\r"))
 	d.outgoing <- []byte("RDT1003011174511003:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -464,7 +465,7 @@ func TestCheckouts(t *testing.T) {
 	}
 
 	// Test successfull checkout
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("121NNY20140303    110236AOHUTL|AA95|AB03011063175001|AJCat's cradle|AH20140331    235900|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("121NNY20140303    110236AOHUTL|AA95|AB03011063175001|AJCat's cradle|AH20140331    235900|\r"))
 	d.outgoing <- []byte("RDT1003011063175001:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -522,7 +523,7 @@ func TestCheckouts(t *testing.T) {
 
 // Test that rereading of items with missing tags doesn't trigger multiple SIP-calls
 func TestBarcodesSession(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	var d = newDummyRFID()
 	go d.run()
 	a := newDummyUIAgent()
@@ -553,7 +554,7 @@ func TestBarcodesSession(t *testing.T) {
 	d.outgoing <- []byte("OK\r")
 
 	_ = <-uiChan
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 	msg = <-d.incoming
 	d.outgoing <- []byte("OK\r")
@@ -569,7 +570,7 @@ func TestBarcodesSession(t *testing.T) {
 }
 
 func TestWriteLogic(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	sipPool, _ = pool.New(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	var d = newDummyRFID()
 	go d.run()
 	a := newDummyUIAgent()
@@ -728,7 +729,7 @@ func TestWriteLogic(t *testing.T) {
 }
 
 func TestUserErrors(t *testing.T) {
-	sipPool, _ = NewSIPConnPool(1, 1, FailingSIPResponse())
+	sipPool, _ = pool.New(1, 1, FailingSIPResponse())
 
 	var d = newDummyRFID()
 	go d.run()

@@ -2,10 +2,13 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
+	"github.com/fatih/pool"
 	"github.com/loggo/loggo"
 )
 
@@ -69,27 +72,29 @@ type parserFunc func(string) UIMsg
 // DoSIPCall performs a SIP request using a SIP TCP-connection from a pool. It
 // takes a SIP message as a string and a parser function to transform the SIP
 // response into a UIMsg.
-func DoSIPCall(p *ConnPool, req string, parser parserFunc) (UIMsg, error) {
+func DoSIPCall(p *pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
-	conn := p.Get()
-
-	// 1. Send the SIP request
-	_, err := conn.c.Write([]byte(req))
+	conn, err := p.Get()
 	if err != nil {
 		return UIMsg{}, err
 	}
-	defer p.Release(conn)
+
+	// 1. Send the SIP request
+	_, err = conn.Write([]byte(req))
+	if err != nil {
+		return UIMsg{}, err
+	}
 
 	sipLogger.Infof("-> %v", strings.TrimSpace(req))
 
 	// 2. Read SIP response
 
-	reader := bufio.NewReader(conn.c)
+	reader := bufio.NewReader(conn)
 	resp, err := reader.ReadString('\r')
 	if err != nil {
 		return UIMsg{}, err
 	}
-
+	defer p.Put(conn)
 	sipLogger.Infof("<- %v", strings.TrimSpace(resp))
 
 	// 3. Parse the response
@@ -179,4 +184,44 @@ func itemStatusParse(s string) UIMsg {
 		status = "strekkoden finnes ikke i basen"
 	}
 	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Status: status, Unknown: unknown, Label: fields["AJ"]}}
+}
+
+// initSIPConn is the default factory function for creatin a SIP connection.
+func initSIPConn() (net.Conn, error) {
+	var i int
+	select {
+	case id := <-sipIDs:
+		i = id
+	default:
+		return nil, errors.New("no more IDs to create SIP login messages")
+	}
+
+	conn, err := net.Dial("tcp", cfg.SIPServer)
+	if err != nil {
+		return nil, err
+	}
+
+	out := fmt.Sprintf(sipMsg93, i, i)
+	_, err = conn.Write([]byte(out))
+	if err != nil {
+		sipLogger.Errorf(err.Error())
+		return nil, err
+	}
+	sipLogger.Infof("-> %v", strings.TrimSpace(out))
+
+	reader := bufio.NewReader(conn)
+	in, err := reader.ReadString('\r')
+	if err != nil {
+		sipLogger.Errorf(err.Error())
+		return nil, err
+	}
+
+	sipLogger.Infof("<- %v", strings.TrimSpace(in))
+
+	// fail if response == 940 (success == 941)
+	if in[2] == '0' {
+		return nil, errors.New("SIP login failed")
+	}
+
+	return conn, nil
 }
