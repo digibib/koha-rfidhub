@@ -54,6 +54,7 @@ func main() {
 	sipPool, err = pool.New(1, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
 		logger.Errorf(err.Error())
+		os.Exit(1)
 	}
 
 	logger.Infof("Starting Websocket hub")
