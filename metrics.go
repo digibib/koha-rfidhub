@@ -15,10 +15,12 @@ type appMetrics struct {
 }
 
 type exportMetrics struct {
-	UpTime           string
-	PID              int
-	ClientsKnown     int
-	ClientsConnected int64
+	UpTime                 string
+	PID                    int
+	ClientsKnown           int
+	ClientsConnected       int64
+	SIPPoolCurrentCapacity int
+	SIPPoolMaxCapacity     int
 }
 
 func registerMetrics() *appMetrics {
@@ -38,9 +40,11 @@ func (m *appMetrics) Export() *exportMetrics {
 	uptime := now.Sub(m.StartTime)
 
 	return &exportMetrics{
-		UpTime:           uptime.String(),
-		PID:              m.PID,
-		ClientsKnown:     m.ClientsKnown,
-		ClientsConnected: m.ClientsConnected.Count(),
+		UpTime:                 uptime.String(),
+		PID:                    m.PID,
+		ClientsKnown:           m.ClientsKnown,
+		ClientsConnected:       m.ClientsConnected.Count(),
+		SIPPoolCurrentCapacity: sipPool.CurrentCapacity(),
+		SIPPoolMaxCapacity:     sipPool.MaximumCapacity(),
 	}
 }
