@@ -186,7 +186,7 @@ func itemStatusParse(s string) UIMsg {
 	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Status: status, Unknown: unknown, Label: fields["AJ"]}}
 }
 
-// initSIPConn is the default factory function for creatin a SIP connection.
+// initSIPConn is the default factory function for creating a SIP connection.
 func initSIPConn() (net.Conn, error) {
 	var i int
 	select {

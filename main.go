@@ -8,7 +8,7 @@ import (
 	"github.com/loggo/loggo"
 )
 
-// APPLICATION STATE
+// APPLICATION GLOBALS
 
 var (
 	cfg     = &config{}
