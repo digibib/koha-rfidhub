@@ -33,15 +33,20 @@ const (
 	cmdTagCount
 	cmdWrite
 
-	// Initialize writer commands. Reader returns OK or NOK.
-	// TODO choose better names when/if we get documentation
-	cmdSLPLBN // SLPLBN|02030000 (library number)
-	cmdSLPLBC // SLPLBC|NO (country code)
-	cmdSLPDTM // SLPDTM|DS24 (the Danish standard)
-	cmdSLPSSB // SLPSSB|0 (?)
-	cmdSLPCRD // SLPCRD|1 (?)
-	cmdSLPWTM // SLPWTM|5000 (timeout in ms)
-	cmdSLPRSS // SLPRSS|1 (?)
+	// Initialize writer commands.
+	// SLP (Set Library Paramter) commands. Reader returns OK or NOK.
+	cmdSLPLBN // SLPLBN|02030000 (LBN: library number)
+	cmdSLPLBC // SLPLBC|NO       (LBC: library country code)
+	cmdSLPDTM // SLPDTM|DS24     (DTM: data model, "Danish Standard" / ISO28560−3)
+	cmdSLPSSB // SLPSSB|0        (SSB: set security bit when writing, 0: Reset, 1: Set)
+	cmdSLPCRD // SLPCRD|1        (CRD: check read after write: 0: No, 1: Yes)
+	cmdSLPWTM // SLPWTM|5000     (WTM: time to wait for "setsize" tags to be available, in ms)
+	cmdSLPRSS // SLPRSS|1        (RSS: return set status, status value for 1−tag−only sets,
+	//                  0: complete, 1: not complete, 2: complete but check manually)
+
+	// The following are not used yet
+	cmdSLPEID // SLPEID|1        (EID: send extended ID, 0: No, 1: Yes − include library number and country code)
+	cmdSLPESP // SLPESP|:        (ESP: extended ID seperator: default character ’:’)
 )
 
 // RFIDReq represents request to be sent to the RFID-unit.

@@ -56,10 +56,13 @@ func (v *deichmanVendor) GenerateRFIDReq(r RFIDReq) []byte {
 		v.WriteMode = true
 		v.buf.Reset()
 		i := strconv.Itoa(r.TagCount)
-		v.buf.Write([]byte("WRT"))
+		v.buf.Write([]byte("WRT")) // Write Tag
 		v.buf.Write(r.Data)
 		v.buf.WriteByte('|')
+		// Number of parts in set
 		v.buf.WriteString(i)
+		// 0: multipart sets have a tag on each part
+		// 1: single tag only
 		v.buf.Write([]byte("|0\r"))
 		return v.buf.Bytes()
 	case cmdSLPLBN:
