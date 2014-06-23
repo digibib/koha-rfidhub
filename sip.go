@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fatih/pool"
@@ -82,6 +83,7 @@ func DoSIPCall(p *pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 	// 1. Send the SIP request
 	_, err = conn.Write([]byte(req))
 	if err != nil {
+		sipIDs.markAsLost(conn)
 		return UIMsg{}, err
 	}
 
@@ -92,6 +94,7 @@ func DoSIPCall(p *pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 	reader := bufio.NewReader(conn)
 	resp, err := reader.ReadString('\r')
 	if err != nil {
+		sipIDs.markAsLost(conn)
 		return UIMsg{}, err
 	}
 	defer p.Put(conn)
@@ -188,17 +191,23 @@ func itemStatusParse(s string) UIMsg {
 
 // initSIPConn is the default factory function for creating a SIP connection.
 func initSIPConn() (net.Conn, error) {
-	var i int
-	select {
-	case id := <-sipIDs:
-		i = id
-	default:
-		return nil, errors.New("no more IDs to create SIP login messages")
-	}
-
 	conn, err := net.Dial("tcp", cfg.SIPServer)
 	if err != nil {
 		return nil, err
+	}
+
+	i := 0
+	sipIDs.Lock()
+	for k, v := range sipIDs.m {
+		if v == nil {
+			i = k
+			break
+		}
+	}
+	sipIDs.Unlock()
+
+	if i == 0 {
+		return nil, errors.New("no more IDs to create SIP login messages")
 	}
 
 	out := fmt.Sprintf(sipMsg93, i, i)
@@ -223,5 +232,35 @@ func initSIPConn() (net.Conn, error) {
 		return nil, errors.New("SIP login failed")
 	}
 
+	sipIDs.Lock()
+	sipIDs.m[i] = conn
+	sipIDs.Unlock()
+
 	return conn, nil
+}
+
+type sipID struct {
+	sync.Mutex
+	m map[int]net.Conn
+}
+
+func newSipIDs(n int) *sipID {
+	s := sipID{m: make(map[int]net.Conn)}
+	s.Lock()
+	defer s.Unlock()
+	for i := 0; i < n; i++ {
+		s.m[i+1] = nil
+	}
+	return &s
+}
+
+func (s *sipID) markAsLost(c net.Conn) {
+	s.Lock()
+	defer s.Unlock()
+	for k, v := range s.m {
+		if v == c {
+			s.m[k] = nil
+			break
+		}
+	}
 }

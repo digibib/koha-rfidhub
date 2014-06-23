@@ -106,6 +106,7 @@ func init() {
 		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},
 		FallBackBranch: "ukjent",
 	}
+	sipIDs = newSipIDs(1)
 	sipPool, _ = pool.New(1, 1, initFakeConn)
 
 	uiChan = make(chan UIMsg)

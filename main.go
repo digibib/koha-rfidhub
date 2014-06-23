@@ -13,7 +13,7 @@ import (
 var (
 	cfg     = &config{}
 	sipPool *pool.Pool
-	sipIDs  chan (int)
+	sipIDs  *sipID
 	hub     *Hub
 	logger  = loggo.GetLogger("main")
 	status  *appMetrics
@@ -49,10 +49,7 @@ func main() {
 	status = registerMetrics()
 
 	// START SERVICES
-	sipIDs = make(chan int, cfg.NumSIPConnections)
-	for i := 0; i < cfg.NumSIPConnections; i++ {
-		sipIDs <- i + 1
-	}
+	sipIDs = newSipIDs(cfg.NumSIPConnections)
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	sipPool, err = pool.New(1, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
