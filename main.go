@@ -28,15 +28,18 @@ func main() {
 		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
+			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
+			ErrorLogFile:      "errors.log",
 			SIPServer:         "localhost:6001",
 			NumSIPConnections: 3,
 			FallBackBranch:    "ukjent",
-			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 		}
-		logger.Warningf("No config.json file found, using standard values")
+		logger.Infof("No config.json file found, using standard values:\n")
+		logger.Infof("%#v", cfg)
 	}
 	loggo.ConfigureLoggers(cfg.LogLevels)
-	file, err := os.Create("errors.log")
+	logger.Infof("%#v", cfg)
+	file, err := os.Create(cfg.ErrorLogFile)
 	if err == nil {
 		err = loggo.RegisterWriter("file",
 			loggo.NewSimpleWriter(file, &loggo.DefaultFormatter{}), loggo.WARNING)
