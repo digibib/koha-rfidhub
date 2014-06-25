@@ -34,11 +34,10 @@ func main() {
 			NumSIPConnections: 3,
 			FallBackBranch:    "ukjent",
 		}
-		logger.Infof("No config.json file found, using standard values:\n")
-		logger.Infof("%#v", cfg)
+		logger.Errorf("Couldn't read config file: %v", err.Error())
 	}
 	loggo.ConfigureLoggers(cfg.LogLevels)
-	logger.Infof("%#v", cfg)
+	logger.Infof("Config: %+v", cfg)
 	file, err := os.Create(cfg.ErrorLogFile)
 	if err == nil {
 		err = loggo.RegisterWriter("file",
