@@ -27,6 +27,11 @@ type config struct {
 	// Adress (host:port) of SIP-server
 	SIPServer string
 
+  // Credentials for SIP user to use in rfid-hub
+	SIPUser string
+	SIPPass string
+	SIPDept string
+
 	// Number of SIP-connections to keep in the pool
 	NumSIPConnections int
 

@@ -19,7 +19,7 @@ const (
 
 	// 93: Login (established SIP connection)
 	// TODO get username+password from config
-	sipMsg93 = "9300CNstresstest%d|COstresstest%d|CPDFB|\r"
+	sipMsg93 = "9300CN%v|CO%v|CP%v|\r"
 
 	// 63: Patron information request
 	sipMsg63 = "63012%v          AO%s|AA%s|AC<terminalpassword>|AD%s|BP000|BQ9999|\r"
@@ -210,7 +210,7 @@ func initSIPConn() (net.Conn, error) {
 		return nil, errors.New("no more IDs to create SIP login messages")
 	}
 
-	out := fmt.Sprintf(sipMsg93, i, i)
+	out := fmt.Sprintf(sipMsg93, cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
 	_, err = conn.Write([]byte(out))
 	if err != nil {
 		sipLogger.Errorf(err.Error())
