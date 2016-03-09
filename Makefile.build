@@ -16,15 +16,15 @@ provision:
 
 run: delete
 	@echo "======= RUNNING RFIDHUB CONTAINER ======\n"
-	@vagrant ssh -c 'sudo docker run -d --name docker-compose-dot -p 9999:9999 $(IMAGE)'
+	@vagrant ssh -c 'sudo docker run -d --name rfidhub -p 9999:9999 $(IMAGE)'
 
 stop:
 	@echo "======= STOPPING RFIDHUB CONTAINER ======\n"
-	vagrant ssh -c 'sudo docker stop docker-compose-dot' || true
+	vagrant ssh -c 'sudo docker stop rfidhub' || true
 
 delete: stop
 	@echo "======= DELETING RFIDHUB CONTAINER ======\n"
-	vagrant ssh -c 'sudo docker rm docker-compose-dot' || true
+	vagrant ssh -c 'sudo docker rm rfidhub' || true
 
 test:
 	vagrant ssh -c 'docker stats --no-stream rfidhub'
