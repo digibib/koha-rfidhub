@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"strconv"
 
 	"gopkg.in/fatih/pool.v2"
 	"github.com/loggo/loggo"
@@ -22,10 +23,11 @@ var (
 // APPLICATION ENTRY POINT
 
 func main() {
-	// SETUP
+	// Read config from json file
 	err := cfg.fromFile("config.json")
 	if err != nil {
-		cfg = &config{
+		// or Fallback to defaults
+			cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
@@ -36,6 +38,21 @@ func main() {
 		}
 		logger.Errorf("Couldn't read config file: %v", err.Error())
 	}
+	// Override with environment vars
+	if os.Getenv("TCP_PORT") != "" {
+		cfg.TCPPort = os.Getenv("TCPPORT")
+	}
+	if os.Getenv("HTTP_PORT") != "" {
+		cfg.HTTPPort = os.Getenv("HTTPPORT")
+	}
+	if os.Getenv("SIP_SERVER") != "" {
+		cfg.SIPServer = os.Getenv("SIP_SERVER")
+	}
+	if os.Getenv("SIP_CONNS") != "" {
+		n, _ := strconv.Atoi(os.Getenv("SIP_CONNS"))
+		cfg.NumSIPConnections = n
+	}
+
 	loggo.ConfigureLoggers(cfg.LogLevels)
 	logger.Infof("Config: %+v", cfg)
 	file, err := os.Create(cfg.ErrorLogFile)
