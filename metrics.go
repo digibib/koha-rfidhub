@@ -20,7 +20,7 @@ type exportMetrics struct {
 	ClientsKnown           int
 	ClientsConnected       int64
 	SIPPoolCurrentCapacity int
-	SIPPoolMaxCapacity     int
+	//SIPPoolMaxCapacity     int
 }
 
 func registerMetrics() *appMetrics {
@@ -44,7 +44,7 @@ func (m *appMetrics) Export() *exportMetrics {
 		PID:                    m.PID,
 		ClientsKnown:           m.ClientsKnown,
 		ClientsConnected:       m.ClientsConnected.Count(),
-		SIPPoolCurrentCapacity: sipPool.CurrentCapacity(),
-		SIPPoolMaxCapacity:     sipPool.MaximumCapacity(),
+		SIPPoolCurrentCapacity: sipPool.Len(),
+		//SIPPoolMaxCapacity:     sipPool.MaximumCapacity(),
 	}
 }

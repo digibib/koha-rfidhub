@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fatih/pool"
+	"gopkg.in/fatih/pool.v2"
 	"github.com/loggo/loggo"
 )
 
@@ -73,7 +73,7 @@ type parserFunc func(string) UIMsg
 // DoSIPCall performs a SIP request using a SIP TCP-connection from a pool. It
 // takes a SIP message as a string and a parser function to transform the SIP
 // response into a UIMsg.
-func DoSIPCall(p *pool.Pool, req string, parser parserFunc) (UIMsg, error) {
+func DoSIPCall(p pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
 	conn, err := p.Get()
 	if err != nil {
@@ -97,7 +97,7 @@ func DoSIPCall(p *pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 		sipIDs.markAsLost(conn)
 		return UIMsg{}, err
 	}
-	defer p.Put(conn)
+	conn.Close()
 	sipLogger.Infof("<- %v", strings.TrimSpace(resp))
 
 	// 3. Parse the response

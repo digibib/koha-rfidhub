@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fatih/pool"
+	"gopkg.in/fatih/pool.v2"
 	"github.com/knakk/specs"
 )
 
@@ -134,7 +134,7 @@ func TestFieldPairs(t *testing.T) {
 
 func TestSIPCheckin(t *testing.T) {
 	s := specs.New(t)
-	p, _ := pool.New(1, 1, fakeSIPResponse("101YNN20140124    093621AOHUTL|AB03011143299001|AQhvmu|AJ316 salmer og sanger|AA1|CS783.4|\r"))
+	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("101YNN20140124    093621AOHUTL|AB03011143299001|AQhvmu|AJ316 salmer og sanger|AA1|CS783.4|\r"))
 
 	res, err := DoSIPCall(p, sipFormMsgCheckin("HUTL", "03011143299001"), checkinParse)
 
@@ -143,12 +143,12 @@ func TestSIPCheckin(t *testing.T) {
 	s.Expect("316 salmer og sanger", res.Item.Label)
 	s.Expect("24/01/2014", res.Item.Date)
 
-	p, _ = pool.New(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
+	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
 	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("strekkoden finnes ikke i basen", res.Item.Status)
 
-	p, _ = pool.New(1, 1, fakeSIPResponse("100YNY20140511    092216AOGRY|AB03010013753001|AQhutl|AJHeksenes historie|CS272 And|CTfroa|CY11|DAåsen|CV02|AFItem not checked out|\r"))
+	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100YNY20140511    092216AOGRY|AB03010013753001|AQhutl|AJHeksenes historie|CS272 And|CTfroa|CY11|DAåsen|CV02|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("hutl", "03010013753001"), checkinParse)
 	s.ExpectNil(err)
 	s.Expect("froa", res.Item.Transfer)
@@ -156,7 +156,7 @@ func TestSIPCheckin(t *testing.T) {
 
 func TestSIPCheckout(t *testing.T) {
 	s := specs.New(t)
-	p, _ := pool.New(1, 1, fakeSIPResponse("121NNY20140124    110740AOHUTL|AA2|AB03011174511003|AJKrutt-Kim|AH20140221    235900|\r"))
+	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("121NNY20140124    110740AOHUTL|AA2|AB03011174511003|AJKrutt-Kim|AH20140221    235900|\r"))
 	res, err := DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "03011174511003"), checkoutParse)
 
 	s.ExpectNil(err)
@@ -164,7 +164,7 @@ func TestSIPCheckout(t *testing.T) {
 	s.Expect("Krutt-Kim", res.Item.Label)
 	s.Expect("21/02/2014", res.Item.Date)
 
-	p, _ = pool.New(1, 1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))
+	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "1234"), checkoutParse)
 
 	s.ExpectNil(err)
@@ -174,14 +174,14 @@ func TestSIPCheckout(t *testing.T) {
 
 func TestSIPItemStatus(t *testing.T) {
 	s := specs.New(t)
-	p, _ := pool.New(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	res, err := DoSIPCall(p, sipFormMsgItemStatus("03010824124004"), itemStatusParse)
 
 	s.ExpectNil(err)
 	s.Expect(true, res.Item.TransactionFailed)
 	s.Expect("Heavy metal in Baghdad", res.Item.Label)
 
-	p, _ = pool.New(1, 1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r"))
+	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r"))
 	res, err = DoSIPCall(p, sipFormMsgItemStatus("1003010856677001"), itemStatusParse)
 
 	s.ExpectNil(err)

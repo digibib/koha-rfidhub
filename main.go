@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/fatih/pool"
+	"gopkg.in/fatih/pool.v2"
 	"github.com/loggo/loggo"
 )
 
@@ -12,7 +12,7 @@ import (
 
 var (
 	cfg     = &config{}
-	sipPool *pool.Pool
+	sipPool pool.Pool
 	sipIDs  *sipID
 	hub     *Hub
 	logger  = loggo.GetLogger("main")
@@ -53,7 +53,7 @@ func main() {
 	// START SERVICES
 	sipIDs = newSipIDs(cfg.NumSIPConnections)
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
-	sipPool, err = pool.New(1, cfg.NumSIPConnections, initSIPConn)
+	sipPool, err = pool.NewChannelPool(1, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
 		logger.Errorf(err.Error())
 		os.Exit(1)
