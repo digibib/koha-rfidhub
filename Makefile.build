@@ -1,0 +1,42 @@
+.PHONY: all test
+IMAGE ?= digibib/rfidhub
+
+all: reload provision run test
+
+reload: halt up
+
+halt:
+	vagrant halt || true
+
+up:
+	vagrant up --no-provision
+
+provision:
+	sleep 3 && vagrant provision
+
+run: delete
+	@echo "======= RUNNING RFIDHUB CONTAINER ======\n"
+	@vagrant ssh -c 'sudo docker run -d --name docker-compose-dot -p 9999:9999 $(IMAGE)'
+
+stop:
+	@echo "======= STOPPING RFIDHUB CONTAINER ======\n"
+	vagrant ssh -c 'sudo docker stop docker-compose-dot' || true
+
+delete: stop
+	@echo "======= DELETING RFIDHUB CONTAINER ======\n"
+	vagrant ssh -c 'sudo docker rm docker-compose-dot' || true
+
+test:
+	vagrant ssh -c 'docker stats --no-stream rfidhub'
+
+login: # needs EMAIL, PASSWORD, USERNAME
+	@ vagrant ssh -c 'docker login --email=$(EMAIL) --username=$(USERNAME) --password=$(PASSWORD)'
+
+TAG = "$(shell git rev-parse HEAD)"
+
+tag:
+	vagrant ssh -c 'docker tag -f $(IMAGE) $(IMAGE):$(TAG)'
+
+push: tag
+	@echo "======= PUSHING RFIDHUB CONTAINER ======\n"
+	vagrant ssh -c 'docker push $(IMAGE):$(TAG)'
