@@ -2,3 +2,7 @@
 temp
 koha-rfidhub*
 *.log
+
+.vagrant
+build/*
+!build/PLACEHOLDER
