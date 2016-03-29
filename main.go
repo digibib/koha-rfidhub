@@ -33,6 +33,8 @@ func main() {
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 			ErrorLogFile:      "errors.log",
 			SIPServer:         "localhost:6001",
+			SIPUser:           "autouser",
+			SIPPass:           "autopass",
 			NumSIPConnections: 3,
 			FallBackBranch:    "ukjent",
 		}
@@ -47,6 +49,12 @@ func main() {
 	}
 	if os.Getenv("SIP_SERVER") != "" {
 		cfg.SIPServer = os.Getenv("SIP_SERVER")
+	}
+	if os.Getenv("SIP_USER") != "" {
+		cfg.SIPUser = os.Getenv("SIP_USER")
+	}
+	if os.Getenv("SIP_PASS") != "" {
+		cfg.SIPPass = os.Getenv("SIP_PASS")
 	}
 	if os.Getenv("SIP_CONNS") != "" {
 		n, _ := strconv.Atoi(os.Getenv("SIP_CONNS"))
