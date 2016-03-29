@@ -5,8 +5,8 @@ import (
 	"os"
 	"strconv"
 
-	"gopkg.in/fatih/pool.v2"
 	"github.com/loggo/loggo"
+	pool "gopkg.in/fatih/pool.v2"
 )
 
 // APPLICATION GLOBALS
@@ -27,7 +27,7 @@ func main() {
 	err := cfg.fromFile("config.json")
 	if err != nil {
 		// or Fallback to defaults
-			cfg = &config{
+		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
 			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
@@ -78,7 +78,7 @@ func main() {
 	// START SERVICES
 	sipIDs = newSipIDs(cfg.NumSIPConnections)
 	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
-	sipPool, err = pool.NewChannelPool(1, cfg.NumSIPConnections, initSIPConn)
+	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
 		logger.Errorf(err.Error())
 		os.Exit(1)

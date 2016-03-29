@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"gopkg.in/fatih/pool.v2"
 	"github.com/loggo/loggo"
+	pool "gopkg.in/fatih/pool.v2"
 )
 
 const (
