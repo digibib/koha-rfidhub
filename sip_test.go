@@ -3,22 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
-	// "io/ioutil"
-	// "log"
-	"errors"
 	"net"
 	"testing"
 	"time"
 
 	"gopkg.in/fatih/pool.v2"
-	"github.com/knakk/specs"
 )
-
-// func init() {
-// 	log.SetOutput(ioutil.Discard)
-// }
 
 // fakeTCPConn is a mock of the net.Conn interface
 type fakeTCPConn struct {
@@ -100,11 +93,9 @@ func initFakeConn() (net.Conn, error) {
 }
 
 func TestFieldPairs(t *testing.T) {
-	s := specs.New(t)
 
 	fields := pairFieldIDandValue("AOHUTL|AA2|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|ZZ|AFGreetings from Koha. |\r")
-	tests := []specs.Spec{
-		{10, len(fields)},
+	tests := []struct{ want, got string }{
 		{"HUTL", fields["AO"]},
 		{"2", fields["AA"]},
 		{"Fillip Wahl", fields["AE"]},
@@ -116,75 +107,118 @@ func TestFieldPairs(t *testing.T) {
 		{"", fields["ZZ"]},
 		{"Greetings from Koha. ", fields["AF"]},
 	}
-	s.ExpectAll(tests)
+
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("got %q; want %q", tt.got, tt.want)
+		}
+	}
 }
 
 // func TestSIPPatronAuthentication(t *testing.T) {
-// 	s := specs.New(t)
 // 	p := &ConnPool{}
 // 	p.Init(1, fakeSIPResponse("64              01220140123    093212000000030003000000000000AOHUTL|AApatronid1|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|AFGreetings from Koha. |\r"))
 
 // 	res, err := DoSIPCall(p, sipFormMsgAuthenticate("HUTL", "patronid1", "pass"), authParse)
-
-// 	s.ExpectNil(err)
-// 	s.Expect(true, res.Authenticated)
-// 	s.Expect("patronid1", res.PatronID)
-// 	s.Expect("Fillip Wahl", res.PatronName)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	if res.Item.Authenticated != true {
+//		t.Errorf("res.Item.Authenticated == false; want true")
+//	}
+//	if want := "patronid1"; res.PatronID != want {
+//		t.Errorf("res.Item.PatronID == %q; want %q", res.PatronID, want)
+//	}
+//	if want := "Fillip Wahl"; res.PatronName != want {
+//		t.Errorf("res.Item.PatronName == %q; want %q", res.PatronName, want)
+//	}
 // }
 
 func TestSIPCheckin(t *testing.T) {
-	s := specs.New(t)
 	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("101YNN20140124    093621AOHUTL|AB03011143299001|AQhvmu|AJ316 salmer og sanger|AA1|CS783.4|\r"))
 
 	res, err := DoSIPCall(p, sipFormMsgCheckin("HUTL", "03011143299001"), checkinParse)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.TransactionFailed != false {
+		t.Errorf("res.Item.TransactionFailed == true; want false")
+	}
+	if want := "316 salmer og sanger"; res.Item.Label != want {
+		t.Errorf("res.Item.Label == %q; want %q", res.Item.Label, want)
+	}
 
-	s.ExpectNil(err)
-	s.Expect(false, res.Item.TransactionFailed)
-	s.Expect("316 salmer og sanger", res.Item.Label)
-	s.Expect("24/01/2014", res.Item.Date)
+	if want := "24/01/2014"; res.Item.Date != want {
+		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date)
+	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
-	s.Expect(true, res.Item.TransactionFailed)
-	s.Expect("strekkoden finnes ikke i basen", res.Item.Status)
+	if res.Item.TransactionFailed != true {
+		t.Errorf("res.Item.TransactionFailed == false; want true")
+	}
+	if want := "strekkoden finnes ikke i basen"; res.Item.Status != want {
+		t.Errorf("res.Item.Status == %q; want %q", res.Item.Status, want)
+	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100YNY20140511    092216AOGRY|AB03010013753001|AQhutl|AJHeksenes historie|CS272 And|CTfroa|CY11|DAåsen|CV02|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("hutl", "03010013753001"), checkinParse)
-	s.ExpectNil(err)
-	s.Expect("froa", res.Item.Transfer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "froa"; res.Item.Transfer != want {
+		t.Errorf("res.Item.Transfer == %q; want %q", res.Item.Transfer, want)
+	}
 }
 
 func TestSIPCheckout(t *testing.T) {
-	s := specs.New(t)
 	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("121NNY20140124    110740AOHUTL|AA2|AB03011174511003|AJKrutt-Kim|AH20140221    235900|\r"))
 	res, err := DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "03011174511003"), checkoutParse)
-
-	s.ExpectNil(err)
-	s.Expect(false, res.Item.TransactionFailed)
-	s.Expect("Krutt-Kim", res.Item.Label)
-	s.Expect("21/02/2014", res.Item.Date)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.TransactionFailed != false {
+		t.Errorf("res.Item.TransactionFailed == true; want false")
+	}
+	if want := "Krutt-Kim"; res.Item.Label != want {
+		t.Errorf("res.Item.Label == %q; want %q", res.Item.Label, want)
+	}
+	if want := "21/02/2014"; res.Item.Date != want {
+		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date)
+	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckout("HUTL", "2", "1234"), checkoutParse)
-
-	s.ExpectNil(err)
-	s.Expect(true, res.Item.TransactionFailed)
-	s.Expect("Invalid Item", res.Item.Status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.TransactionFailed != true {
+		t.Errorf("res.Item.TransactionFailed == false; want true")
+	}
+	if want := "Invalid Item"; res.Item.Status != want {
+		t.Errorf("res.Item.Status == %q; want %q", res.Item.Status, want)
+	}
 }
 
 func TestSIPItemStatus(t *testing.T) {
-	s := specs.New(t)
 	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	res, err := DoSIPCall(p, sipFormMsgItemStatus("03010824124004"), itemStatusParse)
-
-	s.ExpectNil(err)
-	s.Expect(true, res.Item.TransactionFailed)
-	s.Expect("Heavy metal in Baghdad", res.Item.Label)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.TransactionFailed != true {
+		t.Errorf("res.Item.TransactionFailed == false; want true")
+	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r"))
 	res, err = DoSIPCall(p, sipFormMsgItemStatus("1003010856677001"), itemStatusParse)
-
-	s.ExpectNil(err)
-	s.Expect(true, res.Item.TransactionFailed)
-	s.Expect(true, res.Item.Unknown)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Item.TransactionFailed != true {
+		t.Errorf("res.Item.TransactionFailed == false; want true")
+	}
+	if res.Item.Unknown != true {
+		t.Errorf("res.Item.Unknown == false; want true")
+	}
 }
