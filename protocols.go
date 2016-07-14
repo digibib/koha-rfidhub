@@ -44,9 +44,9 @@ const (
 	cmdSLPRSS // SLPRSS|1        (RSS: return set status, status value for 1−tag−only sets,
 	//                  0: complete, 1: not complete, 2: complete but check manually)
 
-	// The following are not used yet
-	cmdSLPEID // SLPEID|1        (EID: send extended ID, 0: No, 1: Yes − include library number and country code)
-	cmdSLPESP // SLPESP|:        (ESP: extended ID seperator: default character ’:’)
+	// The following are not used:
+	//cmdSLPEID // SLPEID|1        (EID: send extended ID, 0: No, 1: Yes − include library number and country code)
+	//cmdSLPESP // SLPESP|:        (ESP: extended ID seperator: default character ’:’)
 )
 
 // RFIDReq represents request to be sent to the RFID-unit.

@@ -141,7 +141,7 @@ func TestSIPCheckin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Item.TransactionFailed != false {
+	if res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == true; want false")
 	}
 	if want := "316 salmer og sanger"; res.Item.Label != want {
@@ -149,12 +149,12 @@ func TestSIPCheckin(t *testing.T) {
 	}
 
 	if want := "24/01/2014"; res.Item.Date != want {
-		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date)
+		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date, want)
 	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB234567890|CV99|AFItem not checked out|\r"))
 	res, err = DoSIPCall(p, sipFormMsgCheckin("HUTL", "234567890"), checkinParse)
-	if res.Item.TransactionFailed != true {
+	if !res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
 	if want := "strekkoden finnes ikke i basen"; res.Item.Status != want {
@@ -177,14 +177,14 @@ func TestSIPCheckout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Item.TransactionFailed != false {
+	if res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == true; want false")
 	}
 	if want := "Krutt-Kim"; res.Item.Label != want {
 		t.Errorf("res.Item.Label == %q; want %q", res.Item.Label, want)
 	}
 	if want := "21/02/2014"; res.Item.Date != want {
-		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date)
+		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date, want)
 	}
 
 	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("120NUN20140124    131049AOHUTL|AA2|AB1234|AJ|AH|AFInvalid Item|BLY|\r"))
@@ -192,7 +192,7 @@ func TestSIPCheckout(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Item.TransactionFailed != true {
+	if !res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
 	if want := "Invalid Item"; res.Item.Status != want {
@@ -206,7 +206,7 @@ func TestSIPItemStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Item.TransactionFailed != true {
+	if !res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
 
@@ -215,7 +215,7 @@ func TestSIPItemStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Item.TransactionFailed != true {
+	if !res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
 	if res.Item.Unknown != true {

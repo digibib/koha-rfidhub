@@ -61,7 +61,7 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Errorf("status.ClientsConnected => %v, expected 1", status.ClientsConnected)
 	}
 
-	_ = <-uiChan
+	<-uiChan
 
 	a.c.Close()
 }

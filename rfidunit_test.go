@@ -100,7 +100,6 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 func TestMain(m *testing.M) {
 	// setup
 	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
-		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},
 		FallBackBranch: "ukjent",
 	}
 	sipIDs = newSipIDs(1)
@@ -194,7 +193,7 @@ func TestUnavailableSIPServer(t *testing.T) {
 		t.Fatal("RFID-unit didn't get version init command")
 	}
 	d.outgoing <- []byte("OK\r")
-	_ = <-uiChan
+	<-uiChan
 	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
@@ -546,24 +545,24 @@ func TestBarcodesSession(t *testing.T) {
 		t.Fatal("RFID-unit didn't get version init command")
 	}
 	d.outgoing <- []byte("OK\r")
-	_ = <-uiChan // CONNECT OK
+	<-uiChan // CONNECT OK
 
 	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
 
-	_ = <-d.incoming
+	<-d.incoming
 	d.outgoing <- []byte("OK\r")
 
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
-	msg = <-d.incoming
+	<-d.incoming
 	d.outgoing <- []byte("OK\r")
 
-	_ = <-uiChan
+	<-uiChan
 	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
-	msg = <-d.incoming
+	<-d.incoming
 	d.outgoing <- []byte("OK\r")
 
 	uiMsg := <-uiChan
@@ -593,7 +592,7 @@ func TestWriteLogic(t *testing.T) {
 		t.Fatal("RFID-unit didn't get version init command")
 	}
 	d.outgoing <- []byte("OK\r")
-	_ = <-uiChan // CONNECT OK
+	<-uiChan // CONNECT OK
 
 	err = a.c.WriteMessage(websocket.TextMessage,
 		[]byte(`{"Action":"ITEM-INFO", "Item": {"Barcode": "03010824124004"}}`))
@@ -750,7 +749,7 @@ func TestUserErrors(t *testing.T) {
 
 	d.outgoing <- []byte("OK\r")
 
-	_ = <-uiChan
+	<-uiChan
 
 	err = a.c.WriteMessage(websocket.TextMessage,
 		[]byte(`{"Action":"BLA", "this is not well formed json }`))

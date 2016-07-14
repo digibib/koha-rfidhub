@@ -108,7 +108,7 @@ func (v *deichmanVendor) ParseRFIDResp(r []byte) (RFIDResp, error) {
 			}
 			if v.WriteMode {
 				// Ex: OK|E004010046A847AD|E004010046A847AD
-				return RFIDResp{OK: true, WrittenIDs: b[1:len(b)]}, nil
+				return RFIDResp{OK: true, WrittenIDs: b[1:]}, nil
 			}
 			// Ex: OK|2
 			i, err := strconv.Atoi(b[1])
