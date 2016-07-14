@@ -30,15 +30,6 @@ type config struct {
 
 	// Number of SIP-connections to keep in the pool
 	NumSIPConnections int
-
-	// Configured clients (staff PCs with RFID-units)
-	Clients []client
-
-	// Get branch from client IP. Key = IP, Value = Branch
-	ClientsMap map[string]string
-
-	// Use this branch in transactions if client IP is not in config file:
-	FallBackBranch string
 }
 
 func (c *config) fromFile(file string) error {
@@ -50,9 +41,6 @@ func (c *config) fromFile(file string) error {
 	if err != nil {
 		return err
 	}
-	c.ClientsMap = make(map[string]string)
-	for _, cl := range cfg.Clients {
-		c.ClientsMap[cl.IP] = cl.Branch
-	}
+
 	return nil
 }

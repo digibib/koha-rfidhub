@@ -90,6 +90,7 @@ type item struct {
 type UIMsg struct {
 	Action       string // CHECKIN/CHECKOUT/CONNECT/ITEM-INFO/RETRY-ALARM-ON/RETRY-ALARM-OFF/WRITE/END
 	Patron       string // Patron username/barcode
+	Branch       string // branch where transaction is taking place
 	RFIDError    bool   // true if RFID-reader is unavailable
 	SIPError     bool   // true if SIP-server is unavailable
 	UserError    bool   // true if user is not using the API correctly

@@ -25,10 +25,6 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if status.ClientsKnown != 2 {
-		t.Errorf("status.ClientsKnown => %v, expected 2", status.ClientsKnown)
-	}
-
 	if status.ClientsConnected != 0 {
 		t.Errorf("status.ClientsConnected => %v, expected 0", status.ClientsConnected)
 	}

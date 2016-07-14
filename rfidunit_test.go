@@ -99,9 +99,7 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 
 func TestMain(m *testing.M) {
 	// setup
-	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
-		FallBackBranch: "ukjent",
-	}
+	cfg = &config{TCPPort: "6007"}
 	sipIDs = newSipIDs(1)
 	sipPool, _ = pool.NewChannelPool(1, 1, initFakeConn)
 
@@ -276,7 +274,7 @@ func TestCheckins(t *testing.T) {
 
 	// Send "CHECKIN" message from UI and verify that the UI gets notified of
 	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN","Branch":"fmaj"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
@@ -432,7 +430,7 @@ func TestCheckouts(t *testing.T) {
 
 	// Send "CHECKOUT" message from UI and verify that the UI gets notified of
 	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKOUT", "Patron": "95"}`))
+	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKOUT", "Patron": "95", "Branch":"hutl"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}

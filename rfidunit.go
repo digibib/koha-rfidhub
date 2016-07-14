@@ -56,14 +56,8 @@ type RFIDUnit struct {
 }
 
 func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
-	ip := addr2IP(c.RemoteAddr().String())
-	dept := cfg.FallBackBranch
-	if branch, ok := cfg.ClientsMap[ip]; ok {
-		dept = branch
-	}
 	return &RFIDUnit{
 		state:          UNITIdle,
-		dept:           dept,
 		vendor:         newDeichmanVendor(), // TODO get this from config
 		conn:           c,
 		failedAlarmOn:  make(map[string]string),
@@ -125,6 +119,7 @@ func (u *RFIDUnit) run() {
 				u.ToRFID <- r
 			case "CHECKIN":
 				u.state = UNITCheckinWaitForBegOK
+				u.dept = uiReq.Branch
 				log.Printf("[%v] UNITCheckinWaitForBegOK", adr)
 				u.reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})
@@ -139,6 +134,7 @@ func (u *RFIDUnit) run() {
 				}
 				u.state = UNITCheckoutWaitForBegOK
 				u.patron = uiReq.Patron
+				u.dept = uiReq.Branch
 				log.Printf("[%v] UNITCheckoutWaitForBegOK", adr)
 				u.reset()
 				r := u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdBeginScan})

@@ -10,14 +10,12 @@ import (
 type appMetrics struct {
 	StartTime        time.Time
 	PID              int
-	ClientsKnown     int
 	ClientsConnected metrics.Counter
 }
 
 type exportMetrics struct {
 	UpTime                 string
 	PID                    int
-	ClientsKnown           int
 	ClientsConnected       int64
 	SIPPoolCurrentCapacity int
 	//SIPPoolMaxCapacity     int
@@ -28,7 +26,6 @@ func registerMetrics() *appMetrics {
 
 	m.StartTime = time.Now()
 	m.PID = os.Getpid()
-	m.ClientsKnown = len(cfg.Clients)
 	m.ClientsConnected = metrics.NewCounter()
 	metrics.Register("ClientsConnected", m.ClientsConnected)
 
@@ -42,7 +39,6 @@ func (m *appMetrics) Export() *exportMetrics {
 	return &exportMetrics{
 		UpTime:                 uptime.String(),
 		PID:                    m.PID,
-		ClientsKnown:           m.ClientsKnown,
 		ClientsConnected:       m.ClientsConnected.Count(),
 		SIPPoolCurrentCapacity: sipPool.Len(),
 		//SIPPoolMaxCapacity:     sipPool.MaximumCapacity(),

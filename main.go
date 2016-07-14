@@ -34,7 +34,6 @@ func main() {
 			SIPUser:           "autouser",
 			SIPPass:           "autopass",
 			NumSIPConnections: 3,
-			FallBackBranch:    "ukjent",
 		}
 		log.Printf("ERROR: Couldn't read config file: %v", err.Error())
 	}
