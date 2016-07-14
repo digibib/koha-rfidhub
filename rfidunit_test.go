@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -96,8 +97,8 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 	}
 }
 
-func init() {
-	// setup & start the hub
+func TestMain(m *testing.M) {
+	// setup
 	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
 		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},
 		FallBackBranch: "ukjent",
@@ -113,6 +114,15 @@ func init() {
 	http.HandleFunc("/ws", wsHandler)
 	http.HandleFunc("/.status", statusHandler)
 	go http.ListenAndServe("127.0.0.1:8888", nil)
+	time.Sleep(100 * time.Millisecond) // TODO find better solution
+
+	// tests
+	retCode := m.Run()
+
+	// teardown
+	// TODO
+
+	os.Exit(retCode)
 }
 
 func TestMissingRFIDUnit(t *testing.T) {
