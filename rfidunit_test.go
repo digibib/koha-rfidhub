@@ -9,9 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/fatih/pool.v2"
 	"github.com/gorilla/websocket"
-	"github.com/loggo/loggo"
+	"gopkg.in/fatih/pool.v2"
 )
 
 var uiChan chan UIMsg
@@ -98,9 +97,6 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 }
 
 func init() {
-	loggo.ConfigureLoggers("<root>=DEBUG")
-	//loggo.RemoveWriter("default")
-
 	// setup & start the hub
 	cfg = &config{TCPPort: "6007", ClientsMap: make(map[string]string),
 		Clients:        []client{client{"0.0.0.1", "hutl"}, client{"0.0.0.2", "fmaj"}},

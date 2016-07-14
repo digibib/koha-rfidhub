@@ -17,17 +17,13 @@ type config struct {
 	// Listening Port of the HTTP and WebSocket server
 	HTTPPort string
 
-	// Log levels per module
-	// Example: "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING"
-	LogLevels string
-
 	// Log errors & warnings to this file
 	ErrorLogFile string
 
 	// Adress (host:port) of SIP-server
 	SIPServer string
 
-  // Credentials for SIP user to use in rfid-hub
+	// Credentials for SIP user to use in rfid-hub
 	SIPUser string
 	SIPPass string
 	SIPDept string

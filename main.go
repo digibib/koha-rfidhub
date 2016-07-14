@@ -1,11 +1,11 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 
-	"github.com/loggo/loggo"
 	pool "gopkg.in/fatih/pool.v2"
 )
 
@@ -16,7 +16,6 @@ var (
 	sipPool pool.Pool
 	sipIDs  *sipID
 	hub     *Hub
-	logger  = loggo.GetLogger("main")
 	status  *appMetrics
 )
 
@@ -30,7 +29,6 @@ func main() {
 		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
-			LogLevels:         "<root>=INFO;hub=INFO;main=INFO;sip=INFO;rfidunit=DEBUG;web=WARNING",
 			ErrorLogFile:      "errors.log",
 			SIPServer:         "localhost:6001",
 			SIPUser:           "autouser",
@@ -38,7 +36,7 @@ func main() {
 			NumSIPConnections: 3,
 			FallBackBranch:    "ukjent",
 		}
-		logger.Errorf("Couldn't read config file: %v", err.Error())
+		log.Printf("ERROR: Couldn't read config file: %v", err.Error())
 	}
 	// Override with environment vars
 	if os.Getenv("TCP_PORT") != "" {
@@ -61,35 +59,26 @@ func main() {
 		cfg.NumSIPConnections = n
 	}
 
-	loggo.ConfigureLoggers(cfg.LogLevels)
-	logger.Infof("Config: %+v", cfg)
-	file, err := os.Create(cfg.ErrorLogFile)
-	if err == nil {
-		err = loggo.RegisterWriter("file",
-			loggo.NewSimpleWriter(file, &loggo.DefaultFormatter{}), loggo.WARNING)
-		if err != nil {
-			logger.Warningf(err.Error())
-		}
-	}
+	log.Printf("Config: %+v", cfg)
 
 	hub = newHub()
 	status = registerMetrics()
 
 	// START SERVICES
 	sipIDs = newSipIDs(cfg.NumSIPConnections)
-	logger.Infof("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
+	log.Printf("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
-		logger.Errorf(err.Error())
+		log.Println("ERROR", err.Error())
 		os.Exit(1)
 	}
 
-	logger.Infof("Starting Websocket hub")
+	log.Println("Starting Websocket hub")
 	go hub.run()
 
 	http.HandleFunc("/.status", statusHandler)
 	http.HandleFunc("/ws", wsHandler)
 
-	logger.Infof("Starting HTTP server, listening at port %v", cfg.HTTPPort)
+	log.Printf("Starting HTTP server, listening at port %v", cfg.HTTPPort)
 	http.ListenAndServe(":"+cfg.HTTPPort, nil)
 }

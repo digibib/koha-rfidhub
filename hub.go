@@ -4,13 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 
 	"github.com/gorilla/websocket"
-	"github.com/loggo/loggo"
 )
-
-var hubLogger = loggo.GetLogger("hub")
 
 // Hub waits for webscoket-connections coming from Koha's user interface.
 // For each websocket-connection it attempts to open a TCP-connection to a
@@ -47,24 +45,24 @@ func (h *Hub) run() {
 
 			// If there is allready a connection from that IP - close it
 			if oldc, ok := h.ipAdresses[ip]; ok {
-				hubLogger.Warningf("Duplicate websocket-connection from IP %v; closing the first one.", ip)
+				log.Printf("WARN: Duplicate websocket-connection from IP %v; closing the first one.", ip)
 				if oldc.unit != nil {
 					oldc.unit.Quit <- true
 				}
 
 				oldc.unit = nil
 				oldc.ws.Close()
-				hubLogger.Infof("UI[%v] connection closed", ip)
+				log.Printf("UI[%v] connection closed", ip)
 			}
 
 			h.uiConnections[c] = true
 			h.ipAdresses[ip] = c
-			hubLogger.Infof("UI[%v] connected", ip)
+			log.Printf("UI[%v] connected", ip)
 
 			// Try to create a TCP connection to RFID-unit:
 			conn, err := net.Dial("tcp", ip+":"+cfg.TCPPort)
 			if err != nil {
-				hubLogger.Warningf("RFID-unit[%v:%v] connection failed: %v", ip, cfg.TCPPort, err.Error())
+				log.Printf("WARN: RFID-unit[%v:%v] connection failed: %v", ip, cfg.TCPPort, err.Error())
 				// Note that the Hub never retries to connect after failure.
 				// The User must refresh the UI page to try to establish the
 				// RFID TCP connection again.
@@ -80,7 +78,7 @@ func (h *Hub) run() {
 			if err != nil {
 				initError = err.Error()
 			}
-			hubLogger.Infof("-> RFID-unit[%v:%v] %q", ip, cfg.TCPPort, req)
+			log.Printf("-> RFID-unit[%v:%v] %q", ip, cfg.TCPPort, req)
 
 			rdr := bufio.NewReader(conn)
 			msg, err := rdr.ReadBytes('\r')
@@ -91,20 +89,20 @@ func (h *Hub) run() {
 			if err != nil {
 				initError = err.Error()
 			}
-			hubLogger.Infof("<- RFID-unit[%v:%v] %q", ip, cfg.TCPPort, msg)
+			log.Printf("<- RFID-unit[%v:%v] %q", ip, cfg.TCPPort, msg)
 
 			if initError == "" && !r.OK {
 				initError = "RFID-unit responded with NOK"
 			}
 
 			if initError != "" {
-				hubLogger.Errorf("RFID-unit[%v:%v] initialization failed: %v", ip, cfg.TCPPort, initError)
+				log.Printf("ERROR: RFID-unit[%v:%v] initialization failed: %v", ip, cfg.TCPPort, initError)
 				c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
 				unit = nil
 				break
 			}
 
-			hubLogger.Infof("RFID-unit[%v:%v] connected & initialized", ip, cfg.TCPPort)
+			log.Printf("RFID-unit[%v:%v] connected & initialized", ip, cfg.TCPPort)
 			// Initialize the RFID-unit state-machine with the TCP connection:
 			c.unit = unit
 			go unit.run()
@@ -133,7 +131,7 @@ func (h *Hub) run() {
 				}
 			}
 			delete(h.uiConnections, c)
-			hubLogger.Infof("UI[%v] connection lost", ip)
+			log.Printf("UI[%v] connection lost", ip)
 		}
 	}
 }
@@ -155,7 +153,7 @@ func (c *uiConn) writer() {
 		if err != nil {
 			break
 		}
-		hubLogger.Infof("-> UI[%v] %+v", addr2IP(c.ws.RemoteAddr().String()), message)
+		log.Printf("-> UI[%v] %+v", addr2IP(c.ws.RemoteAddr().String()), message)
 	}
 }
 
@@ -168,12 +166,12 @@ func (c *uiConn) reader() {
 		var m UIMsg
 		err = json.Unmarshal(msg, &m)
 		if err != nil {
-			hubLogger.Warningf("UI[%v] failed to unmarshal JSON: %q", addr2IP(c.ws.RemoteAddr().String()), msg)
+			log.Printf("WARN: UI[%v] failed to unmarshal JSON: %q", addr2IP(c.ws.RemoteAddr().String()), msg)
 			c.send <- UIMsg{Action: "CONNECT", UserError: true,
 				ErrorMessage: fmt.Sprintf("Failed to parse the JSON request: %v", err)}
 			continue
 		}
-		hubLogger.Infof("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)
+		log.Printf("<- UI[%v] %q", addr2IP(c.ws.RemoteAddr().String()), msg)
 		if c.unit != nil {
 			if c.unit.state == UNITOff {
 				// TODO log warning? (UI is not aware of state-machine stopped)

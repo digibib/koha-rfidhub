@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/loggo/loggo"
 	pool "gopkg.in/fatih/pool.v2"
 )
 
@@ -33,8 +33,6 @@ const (
 	// 17: Item status
 	sipMsg17 = "17%vAO<institutionid>|AB%s|AC<terminalpassword>|\r"
 )
-
-var sipLogger = loggo.GetLogger("sip")
 
 func sipFormMsgAuthenticate(dept, username, pin string) string {
 	now := time.Now().Format(sipDateLayout)
@@ -87,7 +85,7 @@ func DoSIPCall(p pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 		return UIMsg{}, err
 	}
 
-	sipLogger.Infof("-> %v", strings.TrimSpace(req))
+	log.Printf("-> %v", strings.TrimSpace(req))
 
 	// 2. Read SIP response
 
@@ -98,7 +96,7 @@ func DoSIPCall(p pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 		return UIMsg{}, err
 	}
 	conn.Close()
-	sipLogger.Infof("<- %v", strings.TrimSpace(resp))
+	log.Printf("<- %v", strings.TrimSpace(resp))
 
 	// 3. Parse the response
 	res := parser(resp)
@@ -213,19 +211,19 @@ func initSIPConn() (net.Conn, error) {
 	out := fmt.Sprintf(sipMsg93, cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
 	_, err = conn.Write([]byte(out))
 	if err != nil {
-		sipLogger.Errorf(err.Error())
+		log.Println("ERROR:", err.Error())
 		return nil, err
 	}
-	sipLogger.Infof("-> %v", strings.TrimSpace(out))
+	log.Printf("-> %v", strings.TrimSpace(out))
 
 	reader := bufio.NewReader(conn)
 	in, err := reader.ReadString('\r')
 	if err != nil {
-		sipLogger.Errorf(err.Error())
+		log.Println("ERROR:", err.Error())
 		return nil, err
 	}
 
-	sipLogger.Infof("<- %v", strings.TrimSpace(in))
+	log.Printf("<- %v", strings.TrimSpace(in))
 
 	// fail if response == 940 (success == 941)
 	if in[2] == '0' {
