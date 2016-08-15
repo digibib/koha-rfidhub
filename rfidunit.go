@@ -542,7 +542,7 @@ func (u *RFIDUnit) tcpWriter() {
 		_, err := w.Write(msg)
 		if err != nil {
 			if u.state != UNITOff {
-				log.Printf("ERROR: [%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
+				log.Printf("ERROR: [%v] cannot write to connection: %v", u.conn.RemoteAddr().String(), err)
 				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 				u.Quit <- true
 			}
@@ -552,7 +552,7 @@ func (u *RFIDUnit) tcpWriter() {
 		err = w.Flush()
 		if err != nil {
 			if u.state != UNITOff {
-				log.Printf("ERROR: [%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
+				log.Printf("ERROR: [%v] cannot write to connection: %v", u.conn.RemoteAddr().String(), err)
 				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 				u.Quit <- true
 			}
