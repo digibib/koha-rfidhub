@@ -12,9 +12,6 @@ type config struct {
 	// Listening Port of the HTTP and WebSocket server
 	HTTPPort string
 
-	// Log errors & warnings to this file
-	ErrorLogFile string
-
 	// Adress (host:port) of SIP-server
 	SIPServer string
 

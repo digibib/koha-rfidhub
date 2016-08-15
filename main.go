@@ -29,7 +29,6 @@ func main() {
 		cfg = &config{
 			TCPPort:           "6005",
 			HTTPPort:          "8899",
-			ErrorLogFile:      "errors.log",
 			SIPServer:         "localhost:6001",
 			SIPUser:           "autouser",
 			SIPPass:           "autopass",
