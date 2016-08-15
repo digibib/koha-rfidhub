@@ -5,11 +5,6 @@ import (
 	"io/ioutil"
 )
 
-type client struct {
-	IP     string // IP-address of the staff client PC
-	Branch string // Branch-code to use in SIP-transactions on this client
-}
-
 type config struct {
 	// Port which RFID-unit is listening on
 	TCPPort string
