@@ -8,7 +8,6 @@
 Vagrant.configure(2) do |config|
 
   config.vm.box = "dduportal/boot2docker"
-  config.vm.network :forwarded_port, guest: 9999, host: 9999
 
   config.vm.provider "virtualbox" do |vb|
     vb.customize ["modifyvm", :id, "--natdnsproxy1", "off"]
