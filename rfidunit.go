@@ -537,9 +537,8 @@ func (u *RFIDUnit) tcpReader() {
 
 // tcpWriter writes messages from channel ToRFID to a TCP connection.
 func (u *RFIDUnit) tcpWriter() {
-	w := bufio.NewWriter(u.conn)
 	for msg := range u.ToRFID {
-		_, err := w.Write(msg)
+		_, err := u.conn.Write(msg)
 		if err != nil {
 			if u.state != UNITOff {
 				log.Printf("ERROR: [%v] cannot write to connection: %v", u.conn.RemoteAddr().String(), err)
@@ -549,14 +548,5 @@ func (u *RFIDUnit) tcpWriter() {
 			break
 		}
 		log.Printf("-> [%v] %q", u.conn.RemoteAddr().String(), msg)
-		err = w.Flush()
-		if err != nil {
-			if u.state != UNITOff {
-				log.Printf("ERROR: [%v] cannot write to connection: %v", u.conn.RemoteAddr().String(), err)
-				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
-				u.Quit <- true
-			}
-			break
-		}
 	}
 }
