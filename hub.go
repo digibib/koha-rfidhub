@@ -31,8 +31,8 @@ func newHub() *Hub {
 	return &Hub{
 		ipAdresses:    make(map[string]*uiConn),
 		uiConnections: make(map[*uiConn]bool),
-		uiReg:         make(chan *uiConn),
-		uiUnReg:       make(chan *uiConn),
+		uiReg:         make(chan *uiConn, 1),
+		uiUnReg:       make(chan *uiConn, 1),
 	}
 }
 
