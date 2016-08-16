@@ -784,8 +784,7 @@ func TestUserErrors(t *testing.T) {
 // Verify that if a second websocket connection is opened from the same IP,
 // the first connection is closed.
 func TestDuplicateClientConnections(t *testing.T) {
-	sipPool.initFn = FailingSIPResponse()
-	sipPool.Init(0)
+	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
 
 	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
 	if err != nil {
