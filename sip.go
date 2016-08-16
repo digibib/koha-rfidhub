@@ -141,7 +141,10 @@ func checkinParse(s string) UIMsg {
 	// Transfer either to holding branch or home branch
 	branch, ok := fields["CT"]
 	if !ok {
-		branch = "" //fields["AQ"] permanent location
+		if fields["AO"] != fields["AQ"] {
+			branch = fields["AQ"]
+		}
+
 	}
 	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
 	return UIMsg{Action: "CHECKIN", Item: item{Transfer: branch, Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
