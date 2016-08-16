@@ -130,6 +130,7 @@ func (h *Hub) run() {
 					delete(h.ipAdresses, ip)
 				}
 			}
+			c.ws.Close()
 			delete(h.uiConnections, c)
 			log.Printf("UI[%v] connection lost", ip)
 		}
