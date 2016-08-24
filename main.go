@@ -39,10 +39,10 @@ func main() {
 	}
 	// Override with environment vars
 	if os.Getenv("TCP_PORT") != "" {
-		cfg.TCPPort = os.Getenv("TCPPORT")
+		cfg.TCPPort = os.Getenv("TCP_PORT")
 	}
 	if os.Getenv("HTTP_PORT") != "" {
-		cfg.HTTPPort = os.Getenv("HTTPPORT")
+		cfg.HTTPPort = os.Getenv("HTTP_PORT")
 	}
 	if os.Getenv("SIP_SERVER") != "" {
 		cfg.SIPServer = os.Getenv("SIP_SERVER")
