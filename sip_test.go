@@ -92,48 +92,6 @@ func initFakeConn() (net.Conn, error) {
 	return c, nil
 }
 
-func TestFieldPairs(t *testing.T) {
-
-	fields := pairFieldIDandValue("AOHUTL|AA2|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|ZZ|AFGreetings from Koha. |\r")
-	tests := []struct{ want, got string }{
-		{"HUTL", fields["AO"]},
-		{"2", fields["AA"]},
-		{"Fillip Wahl", fields["AE"]},
-		{"Y", fields["BL"]},
-		{"Y", fields["CQ"]},
-		{"5", fields["CC"]},
-		{"PT", fields["PC"]},
-		{"Y", fields["PI"]},
-		{"", fields["ZZ"]},
-		{"Greetings from Koha. ", fields["AF"]},
-	}
-
-	for _, tt := range tests {
-		if tt.got != tt.want {
-			t.Errorf("got %q; want %q", tt.got, tt.want)
-		}
-	}
-}
-
-// func TestSIPPatronAuthentication(t *testing.T) {
-// 	p := &ConnPool{}
-// 	p.Init(1, fakeSIPResponse("64              01220140123    093212000000030003000000000000AOHUTL|AApatronid1|AEFillip Wahl|BLY|CQY|CC5|PCPT|PIY|AFGreetings from Koha. |\r"))
-
-// 	res, err := DoSIPCall(p, sipFormMsgAuthenticate("HUTL", "patronid1", "pass"), authParse)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	if res.Item.Authenticated != true {
-//		t.Errorf("res.Item.Authenticated == false; want true")
-//	}
-//	if want := "patronid1"; res.PatronID != want {
-//		t.Errorf("res.Item.PatronID == %q; want %q", res.PatronID, want)
-//	}
-//	if want := "Fillip Wahl"; res.PatronName != want {
-//		t.Errorf("res.Item.PatronName == %q; want %q", res.PatronName, want)
-//	}
-// }
-
 func TestSIPCheckin(t *testing.T) {
 	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("101YNN20140124    093621AOHUTL|AB03011143299001|AQhvmu|AJ316 salmer og sanger|AA1|CS783.4|\r"))
 
@@ -157,7 +115,7 @@ func TestSIPCheckin(t *testing.T) {
 	if !res.Item.TransactionFailed {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
-	if want := "strekkoden finnes ikke i basen"; res.Item.Status != want {
+	if want := "eksemplaret finnes ikke i basen"; res.Item.Status != want {
 		t.Errorf("res.Item.Status == %q; want %q", res.Item.Status, want)
 	}
 
@@ -183,7 +141,7 @@ func TestSIPCheckout(t *testing.T) {
 	if want := "Krutt-Kim"; res.Item.Label != want {
 		t.Errorf("res.Item.Label == %q; want %q", res.Item.Label, want)
 	}
-	if want := "21/02/2014"; res.Item.Date != want {
+	if want := "24/01/2014"; res.Item.Date != want {
 		t.Errorf("res.Item.Date == %q; want %q", res.Item.Date, want)
 	}
 
@@ -201,7 +159,7 @@ func TestSIPCheckout(t *testing.T) {
 }
 
 func TestSIPItemStatus(t *testing.T) {
-	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	p, _ := pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AO|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	res, err := DoSIPCall(p, sipFormMsgItemStatus("03010824124004"), itemStatusParse)
 	if err != nil {
 		t.Fatal(err)
@@ -210,7 +168,7 @@ func TestSIPItemStatus(t *testing.T) {
 		t.Errorf("res.Item.TransactionFailed == false; want true")
 	}
 
-	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AJ|\r"))
+	p, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1801010120140228    110748AB1003010856677001|AO|AJ|\r"))
 	res, err = DoSIPCall(p, sipFormMsgItemStatus("1003010856677001"), itemStatusParse)
 	if err != nil {
 		t.Fatal(err)

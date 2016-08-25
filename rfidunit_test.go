@@ -357,7 +357,7 @@ func TestCheckins(t *testing.T) {
 			Barcode:           "1234",
 			TransactionFailed: true,
 			Unknown:           true,
-			Status:            "strekkoden finnes ikke i basen",
+			Status:            "eksemplaret finnes ikke i basen",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
@@ -365,12 +365,12 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
 	// notified with the books title, along with an error message
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AO|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	msg = <-d.incoming
 	if string(msg) != "OK \r" {
-		t.Errorf("Alarm was changed after unsuccessful checkin")
+		t.Error("Alarm was changed after unsuccessful checkin")
 	}
 	d.outgoing <- []byte("OK\r")
 
@@ -485,7 +485,7 @@ func TestCheckouts(t *testing.T) {
 		Item: item{
 			Label:          "Cat's cradle",
 			Barcode:        "03011063175001",
-			Date:           "31/03/2014",
+			Date:           "03/03/2014",
 			AlarmOffFailed: true,
 			Status:         "Feil: fikk ikke skrudd av alarm.",
 		}}
@@ -513,7 +513,7 @@ func TestCheckouts(t *testing.T) {
 		Item: item{
 			Label:   "Cat's cradle",
 			Barcode: "03011063175001",
-			Date:    "31/03/2014",
+			Date:    "03/03/2014",
 		}}
 	if !reflect.DeepEqual(uiMsg, want) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)

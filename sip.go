@@ -10,68 +10,65 @@ import (
 	"sync"
 	"time"
 
+	"github.com/knakk/sip"
+
 	pool "gopkg.in/fatih/pool.v2"
 )
 
-const (
-	// Transaction date format
-	sipDateLayout = "20060102    150405"
-
-	// 93: Login (established SIP connection)
-	// TODO get username+password from config
-	sipMsg93 = "9300CN%v|CO%v|CP%v|\r"
-
-	// 63: Patron information request
-	sipMsg63 = "63012%v          AO%s|AA%s|AC<terminalpassword>|AD%s|BP000|BQ9999|\r"
-
-	// 09: Chekin
-	sipMsg09 = "09N%v%vAP%v|AO%v|AB%v|AC<terminalpassword>|\r"
-
-	// 11: Checkout
-	sipMsg11 = "11YN%v%vAO%s|AA%s|AB%s|AC<terminalpassword>|\r"
-
-	// 17: Item status
-	sipMsg17 = "17%vAO<institutionid>|AB%s|AC<terminalpassword>|\r"
-)
-
-func sipFormMsgAuthenticate(dept, username, pin string) string {
-	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg63, now, dept, username, pin)
+func sipFormMsgLogin(user, pass, dept string) sip.Message {
+	return sip.NewMessage(sip.MsgReqLogin).AddField(
+		sip.Field{Type: sip.FieldUIDAlgorithm, Value: "0"},
+		sip.Field{Type: sip.FieldPWDAlgorithm, Value: "0"},
+		sip.Field{Type: sip.FieldLoginUserID, Value: user},
+		sip.Field{Type: sip.FieldLoginPassword, Value: pass},
+		sip.Field{Type: sip.FieldLocationCode, Value: dept},
+	)
 }
 
-func sipFormMsgCheckin(dept, barcode string) string {
-	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg09, now, now, dept, dept, barcode)
+func sipFormMsgCheckin(dept, barcode string) sip.Message {
+	now := time.Now().Format(sip.DateLayout)
+	return sip.NewMessage(sip.MsgReqCheckin).AddField(
+		sip.Field{Type: sip.FieldNoBlock, Value: "N"},
+		sip.Field{Type: sip.FieldTransactionDate, Value: now},
+		sip.Field{Type: sip.FieldReturnDate, Value: now},
+		sip.Field{Type: sip.FieldCurrentLocation, Value: dept},
+		sip.Field{Type: sip.FieldInstitutionID, Value: dept},
+		sip.Field{Type: sip.FieldItemIdentifier, Value: barcode},
+		sip.Field{Type: sip.FieldTerminalPassword, Value: ""},
+	)
 }
 
-func sipFormMsgCheckout(dept, username, barcode string) string {
-	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg11, now, now, dept, username, barcode)
+func sipFormMsgCheckout(dept, username, barcode string) sip.Message {
+	now := time.Now().Format(sip.DateLayout)
+	return sip.NewMessage(sip.MsgReqCheckout).AddField(
+		sip.Field{Type: sip.FieldRenewalPolicy, Value: "Y"},
+		sip.Field{Type: sip.FieldNoBlock, Value: "N"},
+		sip.Field{Type: sip.FieldTransactionDate, Value: now},
+		sip.Field{Type: sip.FieldNbDueDate, Value: now},
+		sip.Field{Type: sip.FieldInstitutionID, Value: dept},
+		sip.Field{Type: sip.FieldPatronIdentifier, Value: username},
+		sip.Field{Type: sip.FieldItemIdentifier, Value: barcode},
+		sip.Field{Type: sip.FieldTerminalPassword, Value: ""},
+	)
 }
 
-func sipFormMsgItemStatus(barcode string) string {
-	now := time.Now().Format(sipDateLayout)
-	return fmt.Sprintf(sipMsg17, now, barcode)
-}
-
-func pairFieldIDandValue(msg string) map[string]string {
-	results := make(map[string]string)
-
-	for _, pair := range strings.Split(strings.TrimRight(msg, "|\r"), "|") {
-		id, val := pair[0:2], pair[2:]
-		results[id] = val
-	}
-	return results
+func sipFormMsgItemStatus(barcode string) sip.Message {
+	return sip.NewMessage(sip.MsgReqItemInformation).AddField(
+		sip.Field{Type: sip.FieldTransactionDate, Value: time.Now().Format(sip.DateLayout)},
+		sip.Field{Type: sip.FieldItemIdentifier, Value: barcode},
+		sip.Field{Type: sip.FieldTerminalPassword, Value: ""},
+		sip.Field{Type: sip.FieldInstitutionID, Value: ""},
+	)
 }
 
 // A parserFunc parses a SIP response. It extracts the desired information and
 // returns the JSON message to be sent to the user interface.
-type parserFunc func(string) UIMsg
+type parserFunc func(sip.Message) UIMsg
 
 // DoSIPCall performs a SIP request using a SIP TCP-connection from a pool. It
 // takes a SIP message as a string and a parser function to transform the SIP
 // response into a UIMsg.
-func DoSIPCall(p pool.Pool, req string, parser parserFunc) (UIMsg, error) {
+func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 	// 0. Get connection from pool
 	conn, err := p.Get()
 	if err != nil {
@@ -79,115 +76,136 @@ func DoSIPCall(p pool.Pool, req string, parser parserFunc) (UIMsg, error) {
 	}
 
 	// 1. Send the SIP request
-	_, err = conn.Write([]byte(req))
-	if err != nil {
+	if err = msg.Encode(conn); err != nil {
 		sipIDs.markAsLost(conn)
 		return UIMsg{}, err
 	}
 
-	log.Printf("-> %v", strings.TrimSpace(req))
+	log.Printf("-> %v", strings.TrimSpace(msg.String()))
 
 	// 2. Read SIP response
 
 	reader := bufio.NewReader(conn)
-	resp, err := reader.ReadString('\r')
+	resp, err := reader.ReadBytes('\r')
 	if err != nil {
 		sipIDs.markAsLost(conn)
 		return UIMsg{}, err
 	}
 	conn.Close()
-	log.Printf("<- %v", strings.TrimSpace(resp))
+	log.Printf("<- %v", strings.TrimSpace(string(resp)))
 
 	// 3. Parse the response
-	res := parser(resp)
+	respMsg, err := sip.Decode(resp)
+	if err != nil {
+		return UIMsg{}, err
+	}
+
+	res := parser(respMsg)
 
 	return res, nil
 }
 
-// func authParse(s string) UIMsg {
-// 	b := s[61:] // first part of SIPresponse not needed here
-// 	fields := pairFieldIDandValue(b)
-
-// 	var auth bool
-// 	if fields["CQ"] == "Y" {
-// 		auth = true
-// 	}
-// 	return UIMsg{Action: "LOGIN", Authenticated: auth, PatronID: fields["AA"], PatronName: fields["AE"]}
-// }
-
-// TODO make parsefunctions more robust. What if len(s) < 24?
-func checkinParse(s string) UIMsg {
-	a, b := s[:24], s[24:]
+func checkinParse(msg sip.Message) UIMsg {
 	var (
 		fail    bool
 		status  string
-		date    string
 		unknown bool
-		branch  string
+		date    string
 	)
-	fields := pairFieldIDandValue(b)
-	if a[2] == '0' {
-		fail = true
-		status = fields["AF"]
+
+	if msg.Field(sip.FieldOK) == "1" {
+		// We only want to display date if checkin was successfull.
+		date = formatDate(msg.Field(sip.FieldTransactionDate))
 	} else {
-		date = fmt.Sprintf("%s/%s/%s", a[12:14], a[10:12], a[6:10])
+		fail = true
+		status = msg.Field(sip.FieldScreenMessage)
 	}
-	if fields["CV"] == "99" {
-		// The code CV99 seems to be invented by Koha's SIP server to indicate
-		// invalid item.. TODO check this with someone who knows.
+
+	switch msg.Field(sip.FieldAlertType) {
+	case "01": // reserved (on same branch)
+		// TODO?
+	case "02": // reserved (on other branch)
+		// TODO?
+	case "04": // send to other branch
+		// TODO?
+	case "99": // other: bad barcode / withdrawn
 		unknown = true
-		status = "strekkoden finnes ikke i basen"
+		status = "eksemplaret finnes ikke i basen"
 	}
+
 	// Transfer either to holding branch or home branch
-	branch, ok := fields["CT"]
-	if !ok {
-		if fields["AO"] != fields["AQ"] {
-			branch = fields["AQ"]
+	branch := msg.Field(sip.FieldDestinationLocation)
+	if branch == "" {
+		if pl := msg.Field(sip.FieldPermanentLocation); pl != msg.Field(sip.FieldInstitutionID) {
+			branch = pl
 		}
-
 	}
-	// TODO ta med AA=patron, CS=dewey, AQ=permanent location (avdelingskode) ?
-	return UIMsg{Action: "CHECKIN", Item: item{Transfer: branch, Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: date, Label: fields["AJ"], Status: status}}
+
+	return UIMsg{
+		Action: "CHECKIN",
+		Item: item{
+			Transfer:          branch,
+			Unknown:           unknown,
+			TransactionFailed: fail,
+			Barcode:           msg.Field(sip.FieldItemIdentifier),
+			Date:              date,
+			Label:             msg.Field(sip.FieldTitleIdentifier),
+			Status:            status,
+		},
+	}
 }
 
-func checkoutParse(s string) UIMsg {
-	a, b := s[:24], s[24:]
+func checkoutParse(msg sip.Message) UIMsg {
 	var (
-		fail         bool
-		status       string
-		checkoutDate string
-		unknown      bool
+		fail    bool
+		unknown bool
+		date    string
 	)
-	fields := pairFieldIDandValue(b)
-	if a[2] == '1' {
-		date := fields["AH"]
-		checkoutDate = fmt.Sprintf("%s/%s/%s", date[6:8], date[4:6], date[0:4])
+
+	if msg.Field(sip.FieldOK) == "1" {
+		// We only want to display date if checkout was successfull
+		date = formatDate(msg.Field(sip.FieldTransactionDate))
 	} else {
 		fail = true
-		if fields["AF"] == "1" {
-			status = "Failed! Don't know why. I wish the SIP-server gave us more information..."
-		} else {
-			status = fields["AF"]
-		}
 	}
-	if fields["AJ"] == "" {
+
+	if msg.Field(sip.FieldTitleIdentifier) == "" {
+		// TODO is this necessary?
 		unknown = true
 	}
-	return UIMsg{Item: item{Unknown: unknown, TransactionFailed: fail, Barcode: fields["AB"], Date: checkoutDate, Status: status, Label: fields["AJ"]}}
+
+	return UIMsg{
+		Item: item{
+			Unknown:           unknown,
+			TransactionFailed: fail,
+			Barcode:           msg.Field(sip.FieldItemIdentifier),
+			Date:              date,
+			Status:            msg.Field(sip.FieldScreenMessage),
+			Label:             msg.Field(sip.FieldTitleIdentifier),
+		},
+	}
 }
 
-func itemStatusParse(s string) UIMsg {
+func itemStatusParse(msg sip.Message) UIMsg {
 	var (
 		unknown bool
 		status  string
 	)
-	_, b := s[:26], s[26:]
-	fields := pairFieldIDandValue(b)
-	if fields["AJ"] == "" {
+
+	if msg.Field(sip.FieldTitleIdentifier) == "" {
 		unknown = true
-		status = "strekkoden finnes ikke i basen"
+		status = "eksemplaret finnes ikke i basen"
 	}
-	return UIMsg{Item: item{TransactionFailed: true, Barcode: fields["AB"], Status: status, Unknown: unknown, Label: fields["AJ"]}}
+
+	return UIMsg{
+		Item: item{
+			TransactionFailed: true,
+			Barcode:           msg.Field(sip.FieldItemIdentifier),
+			Status:            status,
+			Unknown:           unknown,
+			Label:             msg.Field(sip.FieldTitleIdentifier),
+		},
+	}
 }
 
 // initSIPConn is the default factory function for creating a SIP connection.
@@ -211,13 +229,13 @@ func initSIPConn() (net.Conn, error) {
 		return nil, errors.New("no more IDs to create SIP login messages")
 	}
 
-	out := fmt.Sprintf(sipMsg93, cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
-	_, err = conn.Write([]byte(out))
-	if err != nil {
+	msg := sipFormMsgLogin(cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
+
+	if err = msg.Encode(conn); err != nil {
 		log.Println("ERROR:", err.Error())
 		return nil, err
 	}
-	log.Printf("-> %v", strings.TrimSpace(out))
+	log.Printf("-> %v", strings.TrimSpace(msg.String()))
 
 	reader := bufio.NewReader(conn)
 	in, err := reader.ReadString('\r')
@@ -238,6 +256,13 @@ func initSIPConn() (net.Conn, error) {
 	sipIDs.Unlock()
 
 	return conn, nil
+}
+
+func formatDate(s string) string {
+	if len(s) < 9 {
+		return s
+	}
+	return fmt.Sprintf("%s/%s/%s", s[6:8], s[4:6], s[0:4])
 }
 
 type sipID struct {
