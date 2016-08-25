@@ -23,19 +23,14 @@ var (
 // APPLICATION ENTRY POINT
 
 func main() {
-	// Read config from json file
-	err := cfg.fromFile("config.json")
-	if err != nil {
-		// or Fallback to defaults
-		cfg = &config{
-			TCPPort:           "6005",
-			HTTPPort:          "8899",
-			SIPServer:         "localhost:6001",
-			SIPUser:           "autouser",
-			SIPPass:           "autopass",
-			NumSIPConnections: 3,
-		}
-		log.Printf("ERROR: Couldn't read config file: %v", err.Error())
+	// Config defaults
+	cfg = &config{
+		TCPPort:           "6005",
+		HTTPPort:          "8899",
+		SIPServer:         "localhost:6001",
+		SIPUser:           "autouser",
+		SIPPass:           "autopass",
+		NumSIPConnections: 3,
 	}
 	// Override with environment vars
 	if os.Getenv("TCP_PORT") != "" {
@@ -66,6 +61,7 @@ func main() {
 	// START SERVICES
 	sipIDs = newSipIDs(cfg.NumSIPConnections)
 	log.Printf("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
+	var err error
 	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn)
 	if err != nil {
 		log.Println("ERROR", err.Error())
