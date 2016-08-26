@@ -100,7 +100,6 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 func TestMain(m *testing.M) {
 	// setup
 	cfg = &config{TCPPort: "6007"}
-	sipIDs = newSipIDs(1)
 	sipPool, _ = pool.NewChannelPool(1, 1, initFakeConn)
 
 	uiChan = make(chan UIMsg)

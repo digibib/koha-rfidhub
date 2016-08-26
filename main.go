@@ -15,7 +15,6 @@ import (
 var (
 	cfg     = &config{}
 	sipPool pool.Pool
-	sipIDs  *sipID
 	hub     *Hub
 	status  *appMetrics
 )
@@ -59,7 +58,6 @@ func main() {
 	status = registerMetrics()
 
 	// START SERVICES
-	sipIDs = newSipIDs(cfg.NumSIPConnections)
 	log.Printf("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	var err error
 	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn)

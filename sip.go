@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/knakk/sip"
@@ -75,22 +74,21 @@ func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 	if err != nil {
 		return UIMsg{}, err
 	}
+	defer conn.Close()
 
 	// 1. Send the SIP request
 	if err = msg.Encode(conn); err != nil {
-
 		if err == io.EOF {
 			// Koha's SIP server periodically disconnects clients, so we
 			// try to obtain a new connection and retries the send once:
-			if err = msg.Encode(conn); err != nil {
-				sipIDs.markAsLost(conn)
-				return UIMsg{}, err
+			if err = msg.Encode(conn); err == nil {
+				goto sipSent
 			}
-		} else {
-			sipIDs.markAsLost(conn)
-			return UIMsg{}, err
 		}
+		conn.(*pool.PoolConn).MarkUnusable()
+		return UIMsg{}, err
 	}
+sipSent:
 
 	log.Printf("-> %v", strings.TrimSpace(msg.String()))
 
@@ -99,10 +97,10 @@ func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 	reader := bufio.NewReader(conn)
 	resp, err := reader.ReadBytes('\r')
 	if err != nil {
-		sipIDs.markAsLost(conn)
+		conn.(*pool.PoolConn).MarkUnusable()
 		return UIMsg{}, err
 	}
-	conn.Close()
+
 	log.Printf("<- %v", strings.TrimSpace(string(resp)))
 
 	// 3. Parse the response
@@ -226,20 +224,6 @@ func initSIPConn() (net.Conn, error) {
 		return nil, err
 	}
 
-	i := 0
-	sipIDs.Lock()
-	for k, v := range sipIDs.m {
-		if v == nil {
-			i = k
-			break
-		}
-	}
-	sipIDs.Unlock()
-
-	if i == 0 {
-		return nil, errors.New("no more IDs to create SIP login messages")
-	}
-
 	msg := sipFormMsgLogin(cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
 
 	if err = msg.Encode(conn); err != nil {
@@ -262,10 +246,6 @@ func initSIPConn() (net.Conn, error) {
 		return nil, errors.New("SIP login failed")
 	}
 
-	sipIDs.Lock()
-	sipIDs.m[i] = conn
-	sipIDs.Unlock()
-
 	return conn, nil
 }
 
@@ -274,30 +254,4 @@ func formatDate(s string) string {
 		return s
 	}
 	return fmt.Sprintf("%s/%s/%s", s[6:8], s[4:6], s[0:4])
-}
-
-type sipID struct {
-	sync.Mutex
-	m map[int]net.Conn
-}
-
-func newSipIDs(n int) *sipID {
-	s := sipID{m: make(map[int]net.Conn)}
-	s.Lock()
-	defer s.Unlock()
-	for i := 0; i < n; i++ {
-		s.m[i+1] = nil
-	}
-	return &s
-}
-
-func (s *sipID) markAsLost(c net.Conn) {
-	s.Lock()
-	defer s.Unlock()
-	for k, v := range s.m {
-		if v == c {
-			s.m[k] = nil
-			break
-		}
-	}
 }
