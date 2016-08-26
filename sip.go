@@ -74,18 +74,24 @@ func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 	if err != nil {
 		return UIMsg{}, err
 	}
-	defer conn.Close()
 
 	// 1. Send the SIP request
 	if err = msg.Encode(conn); err != nil {
 		if err == io.EOF {
 			// Koha's SIP server periodically disconnects clients, so we
 			// try to obtain a new connection and retries the send once:
+			conn.(*pool.PoolConn).MarkUnusable()
+			conn.Close()
+			conn, err = p.Get()
+			if err != nil {
+				return UIMsg{}, err
+			}
 			if err = msg.Encode(conn); err == nil {
 				goto sipSent
 			}
 		}
 		conn.(*pool.PoolConn).MarkUnusable()
+		conn.Close()
 		return UIMsg{}, err
 	}
 sipSent:
@@ -98,8 +104,10 @@ sipSent:
 	resp, err := reader.ReadBytes('\r')
 	if err != nil {
 		conn.(*pool.PoolConn).MarkUnusable()
+		conn.Close()
 		return UIMsg{}, err
 	}
+	conn.Close()
 
 	log.Printf("<- %v", strings.TrimSpace(string(resp)))
 
