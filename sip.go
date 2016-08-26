@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"strings"
@@ -77,8 +78,18 @@ func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 
 	// 1. Send the SIP request
 	if err = msg.Encode(conn); err != nil {
-		sipIDs.markAsLost(conn)
-		return UIMsg{}, err
+
+		if err == io.EOF {
+			// Koha's SIP server periodically disconnects clients, so we
+			// try to obtain a new connection and retries the send once:
+			if err = msg.Encode(conn); err != nil {
+				sipIDs.markAsLost(conn)
+				return UIMsg{}, err
+			}
+		} else {
+			sipIDs.markAsLost(conn)
+			return UIMsg{}, err
+		}
 	}
 
 	log.Printf("-> %v", strings.TrimSpace(msg.String()))
