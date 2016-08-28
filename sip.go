@@ -87,14 +87,14 @@ func DoSIPCall(p pool.Pool, msg sip.Message, parser parserFunc) (UIMsg, error) {
 				return UIMsg{}, err
 			}
 			if err = msg.Encode(conn); err == nil {
-				goto sipSent
+				goto msgSentOK
 			}
 		}
 		conn.(*pool.PoolConn).MarkUnusable()
 		conn.Close()
 		return UIMsg{}, err
 	}
-sipSent:
+msgSentOK:
 
 	log.Printf("-> %v", strings.TrimSpace(msg.String()))
 
@@ -226,35 +226,38 @@ func itemStatusParse(msg sip.Message) UIMsg {
 }
 
 // initSIPConn is the default factory function for creating a SIP connection.
-func initSIPConn() (net.Conn, error) {
-	conn, err := net.Dial("tcp", cfg.SIPServer)
-	if err != nil {
-		return nil, err
+func initSIPConn(addr string) func() (net.Conn, error) {
+	return func() (net.Conn, error) {
+		conn, err := net.Dial("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+
+		msg := sipFormMsgLogin(cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
+
+		if err = msg.Encode(conn); err != nil {
+			log.Println("ERROR:", err.Error())
+			return nil, err
+		}
+		log.Printf("-> %v", strings.TrimSpace(msg.String()))
+
+		reader := bufio.NewReader(conn)
+		in, err := reader.ReadString('\r')
+		if err != nil {
+			log.Println("ERROR:", err.Error())
+			return nil, err
+		}
+
+		log.Printf("<- %v", strings.TrimSpace(in))
+
+		// fail if response == 940 (success == 941)
+		if in[2] == '0' {
+			return nil, errors.New("SIP login failed")
+		}
+
+		return conn, nil
 	}
 
-	msg := sipFormMsgLogin(cfg.SIPUser, cfg.SIPPass, cfg.SIPDept)
-
-	if err = msg.Encode(conn); err != nil {
-		log.Println("ERROR:", err.Error())
-		return nil, err
-	}
-	log.Printf("-> %v", strings.TrimSpace(msg.String()))
-
-	reader := bufio.NewReader(conn)
-	in, err := reader.ReadString('\r')
-	if err != nil {
-		log.Println("ERROR:", err.Error())
-		return nil, err
-	}
-
-	log.Printf("<- %v", strings.TrimSpace(in))
-
-	// fail if response == 940 (success == 941)
-	if in[2] == '0' {
-		return nil, errors.New("SIP login failed")
-	}
-
-	return conn, nil
 }
 
 func formatDate(s string) string {

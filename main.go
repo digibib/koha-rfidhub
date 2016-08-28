@@ -60,7 +60,7 @@ func main() {
 	// START SERVICES
 	log.Printf("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
 	var err error
-	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn)
+	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn(cfg.TCPPort))
 	if err != nil {
 		log.Println("ERROR", err.Error())
 		os.Exit(1)
