@@ -1,8 +1,36 @@
 package main
 
-/*
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
 func TestStatusEndpoint(t *testing.T) {
-	r, err := http.Get("http://localhost:8888/.status")
+	// Setup: ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           "12346", // not listening
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	// <- end setup
+
+	r, err := http.Get(fmt.Sprintf("http://localhost:%s/.status", port(srv.URL)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -21,16 +49,12 @@ func TestStatusEndpoint(t *testing.T) {
 		t.Errorf("status.ClientsConnected => %v, expected 0", status.ClientsConnected)
 	}
 
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
 
 	r.Body.Close()
-	r, err = http.Get("http://localhost:8888/.status")
+	r, err = http.Get(fmt.Sprintf("http://localhost:%s/.status", port(srv.URL)))
+
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,4 +77,3 @@ func TestStatusEndpoint(t *testing.T) {
 
 	a.c.Close()
 }
-*/
