@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+
+	pool "gopkg.in/fatih/pool.v2"
 
 	"github.com/gorilla/websocket"
 )
@@ -16,6 +19,7 @@ import (
 // If successfull, a state-machine is started to handle all communications
 // between the UI, SIP and the RFID-unit.
 type Hub struct {
+	cfg config
 	// Connected IP adresses
 	ipAdresses map[string]*uiConn
 	// A map of connected UI connections
@@ -24,20 +28,32 @@ type Hub struct {
 	uiReg chan *uiConn
 	// Unregister a UI connection:
 	uiUnReg chan *uiConn
+
+	closed chan bool
 }
 
 // newHub creates and returns a new Hub instance.
-func newHub() *Hub {
+func newHub(cfg config) *Hub {
 	return &Hub{
+		cfg:           cfg,
 		ipAdresses:    make(map[string]*uiConn),
 		uiConnections: make(map[*uiConn]bool),
 		uiReg:         make(chan *uiConn, 10),
 		uiUnReg:       make(chan *uiConn, 10),
+		closed:        make(chan bool),
 	}
 }
 
 // run starts the Hub. Meant to be run in its own goroutine.
 func (h *Hub) run() {
+	log.Printf("Creating SIP Connection pool with size: %v", h.cfg.NumSIPConnections)
+	var err error
+	sipPool, err = pool.NewChannelPool(0, h.cfg.NumSIPConnections, initSIPConn(h.cfg))
+	if err != nil {
+		log.Println("ERROR", err.Error())
+		os.Exit(1)
+	}
+
 	for {
 		select {
 		case c := <-h.uiReg:
@@ -60,9 +76,9 @@ func (h *Hub) run() {
 			log.Printf("UI[%v] connected", ip)
 
 			// Try to create a TCP connection to RFID-unit:
-			conn, err := net.Dial("tcp", ip+":"+cfg.TCPPort)
+			conn, err := net.Dial("tcp", ip+":"+h.cfg.TCPPort)
 			if err != nil {
-				log.Printf("WARN: RFID-unit[%v:%v] connection failed: %v", ip, cfg.TCPPort, err.Error())
+				log.Printf("WARN: RFID-unit[%v:%v] connection failed: %v", ip, h.cfg.TCPPort, err.Error())
 				// Note that the Hub never retries to connect after failure.
 				// The User must refresh the UI page to try to establish the
 				// RFID TCP connection again.
@@ -78,7 +94,7 @@ func (h *Hub) run() {
 			if err != nil {
 				initError = err.Error()
 			}
-			log.Printf("-> RFID-unit[%v:%v] %q", ip, cfg.TCPPort, req)
+			log.Printf("-> RFID-unit[%v:%v] %q", ip, h.cfg.TCPPort, req)
 
 			rdr := bufio.NewReader(conn)
 			msg, err := rdr.ReadBytes('\r')
@@ -89,20 +105,20 @@ func (h *Hub) run() {
 			if err != nil {
 				initError = err.Error()
 			}
-			log.Printf("<- RFID-unit[%v:%v] %q", ip, cfg.TCPPort, msg)
+			log.Printf("<- RFID-unit[%v:%v] %q", ip, h.cfg.TCPPort, msg)
 
 			if initError == "" && !r.OK {
 				initError = "RFID-unit responded with NOK"
 			}
 
 			if initError != "" {
-				log.Printf("ERROR: RFID-unit[%v:%v] initialization failed: %v", ip, cfg.TCPPort, initError)
+				log.Printf("ERROR: RFID-unit[%v:%v] initialization failed: %v", ip, h.cfg.TCPPort, initError)
 				c.send <- UIMsg{Action: "CONNECT", RFIDError: true}
 				unit = nil
 				break
 			}
 
-			log.Printf("RFID-unit[%v:%v] connected & initialized", ip, cfg.TCPPort)
+			log.Printf("RFID-unit[%v:%v] connected & initialized", ip, h.cfg.TCPPort)
 			// Initialize the RFID-unit state-machine with the TCP connection:
 			c.unit = unit
 			go unit.run()
@@ -124,7 +140,7 @@ func (h *Hub) run() {
 			}
 
 			c.unit = nil
-			close(c.send)
+			//close(c.send) TODO disable because instability in tests, not sure we need to close it?
 			if sameC, ok := h.ipAdresses[ip]; ok {
 				if c == sameC {
 					delete(h.ipAdresses, ip)
@@ -133,8 +149,17 @@ func (h *Hub) run() {
 			c.ws.Close()
 			delete(h.uiConnections, c)
 			log.Printf("UI[%v] connection lost", ip)
+		case <-h.closed:
+			return
 		}
 	}
+}
+
+func (h *Hub) Close() {
+	for c, _ := range h.uiConnections {
+		h.uiUnReg <- c
+	}
+	close(h.closed)
 }
 
 // uiConn represents a UI connection. It also stores a reference to the RFID-

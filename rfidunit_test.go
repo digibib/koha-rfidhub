@@ -3,20 +3,21 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
-	"net/http"
-	"os"
+	"net/http/httptest"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"gopkg.in/fatih/pool.v2"
 )
 
-var uiChan chan UIMsg
-
 type dummyRFID struct {
+	mu       sync.Mutex
+	ln       net.Listener
 	c        net.Conn
 	incoming chan []byte
 	outgoing chan []byte
@@ -51,38 +52,69 @@ func (d *dummyRFID) writer() {
 }
 
 func (d *dummyRFID) run() {
-	ln, err := net.Listen("tcp", "127.0.0.1:"+cfg.TCPPort)
+	var err error
+	d.mu.Lock()
+	d.ln, err = net.Listen("tcp", ":0")
+	d.mu.Unlock()
 	if err != nil {
 		println(err.Error())
 		panic("Cannot start dummy RFID TCP-server")
 	}
-	defer ln.Close()
-	c, err := ln.Accept()
+	defer d.ln.Close()
+	c, err := d.ln.Accept()
 	if err != nil {
 		println(err.Error())
-		panic("cannot accept tcp connection")
+		return
 	}
 	d.c = c
 	go d.writer()
 	d.reader()
 }
 
-func newDummyRFID() *dummyRFID {
-	return &dummyRFID{
-		incoming: make(chan []byte),
-		outgoing: make(chan []byte),
+func (d *dummyRFID) addr() string {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return "http://" + d.ln.Addr().String()
+}
+
+func (d *dummyRFID) Close() {
+	if d.c != nil {
+		d.c.Close()
+	}
+	close(d.outgoing)
+	if d.ln != nil {
+		d.ln.Close()
 	}
 }
 
+func newDummyRFIDReader() *dummyRFID {
+	d := dummyRFID{
+		incoming: make(chan []byte),
+		outgoing: make(chan []byte),
+	}
+	go d.run()
+	return &d
+}
+
 type dummyUIAgent struct {
-	c *websocket.Conn
+	c   *websocket.Conn
+	msg chan UIMsg
 }
 
-func newDummyUIAgent() *dummyUIAgent {
-	return &dummyUIAgent{}
+func newDummyUIAgent(msg chan UIMsg, port string) *dummyUIAgent {
+	d := dummyUIAgent{
+		msg: msg,
+	}
+	ws, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://localhost:%s/ws", port), nil)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot connect to ws://localhost:%s/ws: %v", port, err.Error()))
+	}
+	d.c = ws
+	go d.run()
+	return &d
 }
 
-func (a *dummyUIAgent) run(c chan UIMsg) {
+func (a *dummyUIAgent) run() {
 	for {
 		_, msg, err := a.c.ReadMessage()
 		if err != nil {
@@ -93,43 +125,37 @@ func (a *dummyUIAgent) run(c chan UIMsg) {
 		if err != nil {
 			break
 		}
-		c <- m
+		a.msg <- m
 	}
 }
 
-func TestMain(m *testing.M) {
-	// setup
-	cfg = &config{TCPPort: "6007"}
-	sipPool, _ = pool.NewChannelPool(1, 1, initFakeConn)
-
-	uiChan = make(chan UIMsg)
-	hub = newHub()
-	status = registerMetrics()
-
-	go hub.run()
-	http.HandleFunc("/ws", wsHandler)
-	http.HandleFunc("/.status", statusHandler)
-	go http.ListenAndServe("127.0.0.1:8888", nil)
-	time.Sleep(100 * time.Millisecond) // TODO find better solution
-
-	// tests
-	retCode := m.Run()
-
-	// teardown
-	// TODO
-
-	os.Exit(retCode)
+func port(s string) string {
+	return s[strings.LastIndex(s, ":")+1:]
 }
 
 func TestMissingRFIDUnit(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	// Setup: ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           "12346", // not listening
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	uiMsg := <-uiChan
 	want := UIMsg{Action: "CONNECT", RFIDError: true}
@@ -138,21 +164,36 @@ func TestMissingRFIDUnit(t *testing.T) {
 		t.Fatal("UI didn't get notified of failed RFID connect")
 	}
 
-	a.c.Close()
 }
 
 func TestRFIDUnitInitVersionFailure(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
-	var d = newDummyRFID()
-	go d.run()
+	// Setup: ->
 
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	msg := <-d.incoming
 	if string(msg) != "VER2.00\r" {
@@ -167,23 +208,36 @@ func TestRFIDUnitInitVersionFailure(t *testing.T) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
 		t.Fatal("UI didn't get notified of failed RFID connect")
 	}
-
-	a.c.Close()
-	d.c.Close()
-	time.Sleep(100 * time.Millisecond)
 }
 
 func TestUnavailableSIPServer(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
-	var d = newDummyRFID()
-	go d.run()
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	// Setup: ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer().Failing()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	msg := <-d.incoming
 	if string(msg) != "VER2.00\r" {
@@ -191,8 +245,7 @@ func TestUnavailableSIPServer(t *testing.T) {
 	}
 	d.outgoing <- []byte("OK\r")
 	<-uiChan
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
-	if err != nil {
+	if err := a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`)); err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
 	msg = <-d.incoming
@@ -209,52 +262,36 @@ func TestUnavailableSIPServer(t *testing.T) {
 		t.Fatal("UI didn't get notified of SIP error")
 	}
 
-	a.c.Close()
-	d.c.Close()
-	time.Sleep(100 * time.Millisecond)
 }
-
-/*
-func TestEmptySIPConnPool(t *testing.T) {
-	sipPool.initFn = FailingSIPResponse()
-	sipPool.Init(0)
-
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
-
-	uiMsg := <-uiChan
-
-	want := UIMsg{Action: "CONNECT", SIPError: true}
-	if !reflect.DeepEqual(uiMsg, want) {
-		t.Errorf("Got %+v; want %+v", uiMsg, want)
-		t.Errorf("UI didn't get SIP error when SIP pool is empty")
-	}
-	a.c.Close()
-}
-*/
 
 func TestCheckins(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
+	// Setup: ->
 
-	// Create & start the dummy RFID tcp server
-	var d = newDummyRFID()
-	go d.run()
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
 
-	// Connect dummy UI agent
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
 
-	// TESTS /////////////////////////////////////////////////////////////////
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	msg := <-d.incoming
 	if string(msg) != "VER2.00\r" {
@@ -273,7 +310,7 @@ func TestCheckins(t *testing.T) {
 
 	// Send "CHECKIN" message from UI and verify that the UI gets notified of
 	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN","Branch":"fmaj"}`))
+	err := a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN","Branch":"fmaj"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
@@ -288,7 +325,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate found book on RFID-unit. Verify that it get's checked in through
 	// SIP, the Alarm turned on, and that UI get's notified of the transaction
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|CTfbol|AA2|CS927.8|\r"))
+	sipSrv.Respond("101YNN20140226    161239AO|AB03010824124004|AQfhol|AJHeavy metal in Baghdad|CTfbol|AA2|CS927.8|\r")
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -340,7 +377,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate barcode not in our db
 
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("100NUY20140128    114702AO|AB1234|CV99|AFItem not checked out|\r"))
+	sipSrv.Respond("100NUY20140128    114702AO|AB1234|CV99|AFItem not checked out|\r")
 	d.outgoing <- []byte("RDT1234:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -364,7 +401,7 @@ func TestCheckins(t *testing.T) {
 
 	// Simulate book on RFID-unit, but with missing tags. Verify that UI gets
 	// notified with the books title, along with an error message
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AO|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
+	sipSrv.Respond("1803020120140226    203140AB03010824124004|AO|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r")
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 
 	msg = <-d.incoming
@@ -387,7 +424,6 @@ func TestCheckins(t *testing.T) {
 
 	// Verify that the RFID-unit gets END message when the corresponding
 	// websocket connection is closed.
-	a.c.Close()
 
 	// TODO I'm closing connection before, is this necessary?
 	// msg = <-d.incoming
@@ -395,22 +431,37 @@ func TestCheckins(t *testing.T) {
 	// 	t.Fatal("RFID-unit didn't get END message when UI connection was lost")
 	// }
 
-	// Disconnect RFIDUnit
-	d.c.Close()
-	time.Sleep(10 * time.Millisecond)
 }
 
 func TestCheckouts(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
-	var d = newDummyRFID()
-	go d.run()
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+
+	// setup ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	// TESTS /////////////////////////////////////////////////////////////////
 
@@ -429,7 +480,7 @@ func TestCheckouts(t *testing.T) {
 
 	// Send "CHECKOUT" message from UI and verify that the UI gets notified of
 	// succesfull connect & RFID-unit that gets instructed to starts scanning for tags.
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKOUT", "Patron": "95", "Branch":"hutl"}`))
+	err := a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKOUT", "Patron": "95", "Branch":"hutl"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
@@ -444,7 +495,7 @@ func TestCheckouts(t *testing.T) {
 
 	// Simulate book on RFID-unit, but SIP show that book is allready checked out.
 	// Verify that UI gets notified with the books title, along with an error message
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("120NUN20140303    102741AOHUTL|AA95|AB03011174511003|AJKrutt-Kim|AH|AFItem checked out to another patron|BLY|\r"))
+	sipSrv.Respond("120NUN20140303    102741AOHUTL|AA95|AB03011174511003|AJKrutt-Kim|AH|AFItem checked out to another patron|BLY|\r")
 	d.outgoing <- []byte("RDT1003011174511003:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -468,7 +519,7 @@ func TestCheckouts(t *testing.T) {
 	}
 
 	// Test successfull checkout
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("121NNY20140303    110236AOHUTL|AA95|AB03011063175001|AJCat's cradle|AH20140331    235900|\r"))
+	sipSrv.Respond("121NNY20140303    110236AOHUTL|AA95|AB03011063175001|AJCat's cradle|AH20140331    235900|\r")
 	d.outgoing <- []byte("RDT1003011063175001:NO:02030000|0\r")
 
 	msg = <-d.incoming
@@ -519,23 +570,37 @@ func TestCheckouts(t *testing.T) {
 		t.Fatal("UI didn't get the correct message after succesfull checkout")
 	}
 
-	a.c.Close()
-	d.c.Close()
-	time.Sleep(10 * time.Millisecond)
 }
 
 // Test that rereading of items with missing tags doesn't trigger multiple SIP-calls
 func TestBarcodesSession(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
-	var d = newDummyRFID()
-	go d.run()
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	// setup ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	msg := <-d.incoming
 	if string(msg) != "VER2.00\r" {
@@ -544,7 +609,7 @@ func TestBarcodesSession(t *testing.T) {
 	d.outgoing <- []byte("OK\r")
 	<-uiChan // CONNECT OK
 
-	err = a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
+	err := a.c.WriteMessage(websocket.TextMessage, []byte(`{"Action":"CHECKIN"}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
 	}
@@ -552,12 +617,12 @@ func TestBarcodesSession(t *testing.T) {
 	<-d.incoming
 	d.outgoing <- []byte("OK\r")
 
+	sipSrv.Respond("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r")
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 	<-d.incoming
 	d.outgoing <- []byte("OK\r")
 
 	<-uiChan
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
 	d.outgoing <- []byte("RDT1003010824124004:NO:02030000|1\r")
 	<-d.incoming
 	d.outgoing <- []byte("OK\r")
@@ -567,22 +632,38 @@ func TestBarcodesSession(t *testing.T) {
 	if uiMsg.SIPError {
 		t.Fatalf("Rereading of failed tags triggered multiple SIP-calls")
 	}
-
-	a.c.Close()
-	d.c.Close()
 }
 
 func TestWriteLogic(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, fakeSIPResponse("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r"))
-	var d = newDummyRFID()
-	go d.run()
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	// setup ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
+
+	sipSrv.Respond("1803020120140226    203140AB03010824124004|AJHeavy metal in Baghdad|AQfhol|BGfhol|\r")
 
 	msg := <-d.incoming
 	if string(msg) != "VER2.00\r" {
@@ -591,7 +672,7 @@ func TestWriteLogic(t *testing.T) {
 	d.outgoing <- []byte("OK\r")
 	<-uiChan // CONNECT OK
 
-	err = a.c.WriteMessage(websocket.TextMessage,
+	err := a.c.WriteMessage(websocket.TextMessage,
 		[]byte(`{"Action":"ITEM-INFO", "Item": {"Barcode": "03010824124004"}}`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
@@ -727,28 +808,43 @@ func TestWriteLogic(t *testing.T) {
 		t.Fatal("UI didn't get the correct item info after WRITE command ")
 	}
 
-	a.c.Close()
-	d.c.Close()
 }
 
 func TestUserErrors(t *testing.T) {
-	sipPool, _ = pool.NewChannelPool(1, 1, FailingSIPResponse())
 
-	var d = newDummyRFID()
-	go d.run()
-	a := newDummyUIAgent()
-	ws, _, err := websocket.DefaultDialer.Dial("ws://127.0.0.1:8888/ws", nil)
-	if err != nil {
-		t.Fatal("Cannot get ws connection to 127.0.0.1:8888/ws")
-	}
-	a.c = ws
-	go a.run(uiChan)
+	// setup ->
+
+	uiChan := make(chan UIMsg)
+	sipSrv := newSIPTestServer().Failing()
+	defer sipSrv.Close()
+
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+
+	d := newDummyRFIDReader()
+	defer d.Close()
+
+	time.Sleep(50) // make sure rfidreader has got designated a port and is listening
+
+	hub = newHub(config{
+		HTTPPort:          port(srv.URL),
+		SIPServer:         sipSrv.Addr(),
+		TCPPort:           port(d.addr()),
+		NumSIPConnections: 1,
+	})
+	go hub.run()
+	defer hub.Close()
+
+	a := newDummyUIAgent(uiChan, port(srv.URL))
+	defer a.c.Close()
+
+	// <- end setup
 
 	d.outgoing <- []byte("OK\r")
 
 	<-uiChan
 
-	err = a.c.WriteMessage(websocket.TextMessage,
+	err := a.c.WriteMessage(websocket.TextMessage,
 		[]byte(`{"Action":"BLA", "this is not well formed json }`))
 	if err != nil {
 		t.Fatal("UI failed to send message over websokcet conn")
@@ -775,8 +871,6 @@ func TestUserErrors(t *testing.T) {
 		t.Errorf("Got %+v; want %+v", uiMsg, want)
 	}
 
-	a.c.Close()
-	d.c.Close()
 }
 
 /*

@@ -1,14 +1,6 @@
 package main
 
-import (
-	"encoding/json"
-	"io/ioutil"
-	"net/http"
-	"testing"
-
-	"github.com/gorilla/websocket"
-)
-
+/*
 func TestStatusEndpoint(t *testing.T) {
 	r, err := http.Get("http://localhost:8888/.status")
 	if err != nil {
@@ -61,3 +53,4 @@ func TestStatusEndpoint(t *testing.T) {
 
 	a.c.Close()
 }
+*/

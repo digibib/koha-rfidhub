@@ -13,17 +13,24 @@ import (
 // APPLICATION GLOBALS
 
 var (
-	cfg     = &config{}
-	sipPool pool.Pool
+	sipPool pool.Pool // TODO move to hub struct
 	hub     *Hub
-	status  *appMetrics
+	status  *appMetrics // TODO move to hub struct
 )
 
 // APPLICATION ENTRY POINT
 
+func init() {
+	status = registerMetrics()
+
+	// TODO create struct implementing http.handler
+	http.HandleFunc("/.status", statusHandler)
+	http.HandleFunc("/ws", wsHandler)
+}
+
 func main() {
 	// Config defaults
-	cfg = &config{
+	cfg := config{
 		TCPPort:           "6005",
 		HTTPPort:          "8899",
 		SIPServer:         "localhost:6001",
@@ -54,24 +61,14 @@ func main() {
 
 	log.Printf("Config: %+v", cfg)
 
-	hub = newHub()
+	hub = newHub(cfg)
 	status = registerMetrics()
-
-	// START SERVICES
-	log.Printf("Creating SIP Connection pool with size: %v", cfg.NumSIPConnections)
-	var err error
-	sipPool, err = pool.NewChannelPool(0, cfg.NumSIPConnections, initSIPConn(cfg.TCPPort))
-	if err != nil {
-		log.Println("ERROR", err.Error())
-		os.Exit(1)
-	}
 
 	log.Println("Starting Websocket hub")
 	go hub.run()
 
-	http.HandleFunc("/.status", statusHandler)
-	http.HandleFunc("/ws", wsHandler)
-
 	log.Printf("Starting HTTP server, listening at port %v", cfg.HTTPPort)
-	http.ListenAndServe(":"+cfg.HTTPPort, nil)
+	if err := http.ListenAndServe(":"+cfg.HTTPPort, nil); err != nil {
+		log.Fatal(err)
+	}
 }

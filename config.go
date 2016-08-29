@@ -2,6 +2,7 @@ package main
 
 type config struct {
 	// Port which RFID-unit is listening on
+	// TODO rename
 	TCPPort string
 
 	// Listening Port of the HTTP and WebSocket server

@@ -226,9 +226,9 @@ func itemStatusParse(msg sip.Message) UIMsg {
 }
 
 // initSIPConn is the default factory function for creating a SIP connection.
-func initSIPConn(addr string) func() (net.Conn, error) {
+func initSIPConn(cfg config) func() (net.Conn, error) {
 	return func() (net.Conn, error) {
-		conn, err := net.Dial("tcp", addr)
+		conn, err := net.Dial("tcp", cfg.SIPServer)
 		if err != nil {
 			return nil, err
 		}

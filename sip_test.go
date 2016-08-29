@@ -2,100 +2,17 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"errors"
-	"fmt"
-	"io"
 	"net"
 	"testing"
-	"time"
 
 	"gopkg.in/fatih/pool.v2"
 )
 
-// fakeTCPConn is a mock of the net.Conn interface
-type fakeTCPConn struct {
-	buffer bytes.Buffer
-	io.ReadWriter
-}
-
-func (c fakeTCPConn) Close() error                       { return nil }
-func (c fakeTCPConn) LocalAddr() net.Addr                { return nil }
-func (c fakeTCPConn) RemoteAddr() net.Addr               { return nil }
-func (c fakeTCPConn) SetDeadline(t time.Time) error      { return nil }
-func (c fakeTCPConn) SetReadDeadline(t time.Time) error  { return nil }
-func (c fakeTCPConn) SetWriteDeadline(t time.Time) error { return nil }
-
-func fakeSIPResponse(s string) func() (net.Conn, error) {
-	return func() (net.Conn, error) {
-		var (
-			c fakeTCPConn
-			b bytes.Buffer
-		)
-		bufferWriter := bufio.NewWriter(&b)
-		c.ReadWriter = bufio.NewReadWriter(
-			bufio.NewReader(bytes.NewBufferString(s)),
-			bufferWriter)
-		return c, nil
-	}
-}
-
-func EchoSIPResponse() func() (net.Conn, error) {
-	return func() (net.Conn, error) {
-		c := fakeTCPConn{}
-		bufferWriter := bufio.NewWriter(&c.buffer)
-		c.ReadWriter = bufio.NewReadWriter(
-			bufio.NewReader(&c.buffer),
-			bufferWriter)
-		return c, nil
-	}
-}
-
-func FailingSIPResponse() func() (net.Conn, error) {
-	return func() (net.Conn, error) {
-		var (
-			c fakeTCPConn
-			b bytes.Buffer
-		)
-		bufferWriter := bufio.NewWriter(&b)
-		c.ReadWriter = bufio.NewReadWriter(
-			bufio.NewReader(bytes.NewBufferString("")),
-			bufferWriter)
-		return c, nil
-	}
-}
-
-func ErrorSIPResponse() func() (net.Conn, error) {
-	return func() (net.Conn, error) {
-		var (
-			c fakeTCPConn
-			b bytes.Buffer
-		)
-		bufferWriter := bufio.NewWriter(&b)
-		c.ReadWriter = bufio.NewReadWriter(
-			bufio.NewReader(bytes.NewBufferString("")),
-			bufferWriter)
-		return c, errors.New("cannot open SIP-connection")
-	}
-}
-
-func initFakeConn() (net.Conn, error) {
-	var (
-		c fakeTCPConn
-		b bytes.Buffer
-	)
-	i := 1
-	bufferWriter := bufio.NewWriter(&b)
-	c.ReadWriter = bufio.NewReadWriter(
-		bufio.NewReader(bytes.NewBufferString(fmt.Sprintf("result #%v\r", i))),
-		bufferWriter)
-	return c, nil
-}
-
 type SIPTestServer struct {
-	l    net.Listener
-	echo []byte
-	auth bool
+	l       net.Listener
+	echo    []byte
+	auth    bool
+	failing bool
 }
 
 func newSIPTestServer() *SIPTestServer {
@@ -112,7 +29,12 @@ func (s *SIPTestServer) run() {
 	for {
 		conn, err := s.l.Accept()
 		if err != nil {
-			panic(err)
+			return
+		}
+		defer conn.Close()
+		if s.failing {
+			conn.Close()
+			return
 		}
 		r := bufio.NewReader(conn)
 		for {
@@ -127,7 +49,7 @@ func (s *SIPTestServer) run() {
 			}
 			s.auth = true
 		}
-		conn.Close()
+
 	}
 
 }
@@ -135,12 +57,16 @@ func (s *SIPTestServer) run() {
 func (s *SIPTestServer) Respond(msg string) { s.echo = []byte(msg) }
 func (s *SIPTestServer) Addr() string       { return s.l.Addr().String() }
 func (s *SIPTestServer) Close()             { s.l.Close() }
+func (s *SIPTestServer) Failing() *SIPTestServer {
+	s.failing = true
+	return s
+}
 
 func TestSIPCheckin(t *testing.T) {
 	srv := newSIPTestServer()
 	defer srv.Close()
 
-	p, err := pool.NewChannelPool(1, 1, initSIPConn(srv.Addr()))
+	p, err := pool.NewChannelPool(1, 1, initSIPConn(config{SIPServer: srv.Addr()}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +111,7 @@ func TestSIPCheckout(t *testing.T) {
 	srv := newSIPTestServer()
 	defer srv.Close()
 
-	p, err := pool.NewChannelPool(1, 1, initSIPConn(srv.Addr()))
+	p, err := pool.NewChannelPool(1, 1, initSIPConn(config{SIPServer: srv.Addr()}))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +148,7 @@ func TestSIPItemStatus(t *testing.T) {
 	srv := newSIPTestServer()
 	defer srv.Close()
 
-	p, err := pool.NewChannelPool(1, 1, initSIPConn(srv.Addr()))
+	p, err := pool.NewChannelPool(1, 1, initSIPConn(config{SIPServer: srv.Addr()}))
 	if err != nil {
 		t.Fatal(err)
 	}
