@@ -506,12 +506,12 @@ func (u *RFIDUnit) run() {
 			}
 
 		case <-u.Quit:
+			u.state = UNITOff
 			close(u.ToRFID)
 			log.Printf("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
 			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			log.Printf("Closing TCP connection to %v", adr)
 			u.conn.Close()
-			u.state = UNITOff
 			return
 		}
 	}
@@ -525,7 +525,7 @@ func (u *RFIDUnit) tcpReader() {
 		if err != nil {
 			if u.state != UNITOff {
 				log.Printf("ERROR: [%v] cannot read from connection: %v", u.conn.RemoteAddr().String(), err)
-				u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
+				//u.ToUI <- UIMsg{Action: "CONNECT", RFIDError: true}
 				u.Quit <- true
 			}
 			break

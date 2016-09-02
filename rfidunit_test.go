@@ -74,7 +74,8 @@ func (d *dummyRFID) run() {
 func (d *dummyRFID) addr() string {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	return "http://" + d.ln.Addr().String()
+	addr := "http://" + d.ln.Addr().String()
+	return addr
 }
 
 func (d *dummyRFID) Close() {

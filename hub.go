@@ -140,7 +140,6 @@ func (h *Hub) run() {
 			}
 
 			c.unit = nil
-			//close(c.send) TODO disable because instability in tests, not sure we need to close it?
 			if sameC, ok := h.ipAdresses[ip]; ok {
 				if c == sameC {
 					delete(h.ipAdresses, ip)
@@ -149,6 +148,7 @@ func (h *Hub) run() {
 			c.ws.Close()
 			delete(h.uiConnections, c)
 			log.Printf("UI[%v] connection lost", ip)
+			close(c.send)
 		case <-h.closed:
 			return
 		}
