@@ -70,12 +70,15 @@ type RFIDResp struct {
 // For communication between Koha's web intranet interface and the RFID-hub.
 
 type item struct {
-	Label    string
-	Barcode  string
-	Date     string // Format: 10/03/2013
-	Status   string // An error explanation or an error message passed on from SIP-server
-	Transfer string // Branchcode, or empty string if item belongs to the issuing branch
-	NumTags  int
+	Biblionr   string
+	Borrowernr string
+	Label      string
+	Barcode    string
+	Date       string // Format: 10/03/2013
+	Status     string // An error explanation or an error message passed on from SIP-server
+	Transfer   string // Branchcode, or empty string if item belongs to the issuing branch
+	Hold       bool   // true if item is reserved for the current branch
+	NumTags    int
 
 	// Possible errors
 	Unknown           bool // true if SIP server cant give any information on a given barcode

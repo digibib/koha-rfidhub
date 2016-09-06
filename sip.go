@@ -124,10 +124,13 @@ msgSentOK:
 
 func checkinParse(msg sip.Message) UIMsg {
 	var (
-		fail    bool
-		status  string
-		unknown bool
-		date    string
+		fail       bool
+		status     string
+		unknown    bool
+		date       string
+		hold       bool
+		borrowernr string
+		biblionr   string
 	)
 
 	if msg.Field(sip.FieldOK) == "1" {
@@ -140,7 +143,9 @@ func checkinParse(msg sip.Message) UIMsg {
 
 	switch msg.Field(sip.FieldAlertType) {
 	case "01": // reserved (on same branch)
-		// TODO?
+		hold = true
+		borrowernr = msg.Field(sip.FieldHoldPatronIdentifier)
+		biblionr = msg.Field(sip.FieldSequenceNumber)
 	case "02": // reserved (on other branch)
 		// TODO?
 	case "04": // send to other branch
@@ -161,6 +166,7 @@ func checkinParse(msg sip.Message) UIMsg {
 	return UIMsg{
 		Action: "CHECKIN",
 		Item: item{
+			Hold:              hold,
 			Transfer:          branch,
 			Unknown:           unknown,
 			TransactionFailed: fail,
@@ -168,6 +174,8 @@ func checkinParse(msg sip.Message) UIMsg {
 			Date:              date,
 			Label:             msg.Field(sip.FieldTitleIdentifier),
 			Status:            status,
+			Biblionr:          biblionr,
+			Borrowernr:        borrowernr,
 		},
 	}
 }
