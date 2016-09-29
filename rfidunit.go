@@ -68,7 +68,7 @@ func newRFIDUnit(c net.Conn, send chan UIMsg) *RFIDUnit {
 		ToUI:           send,
 		FromRFID:       make(chan []byte),
 		ToRFID:         make(chan []byte),
-		Quit:           make(chan bool, 1),
+		Quit:           make(chan bool),
 	}
 }
 
@@ -506,8 +506,8 @@ func (u *RFIDUnit) run() {
 			}
 
 		case <-u.Quit:
-			u.state = UNITOff
 			close(u.ToRFID)
+			u.state = UNITOff
 			log.Printf("Shutting down RFID-unit state-machine for %v", addr2IP(adr))
 			//u.ToRFID <- u.vendor.GenerateRFIDReq(RFIDReq{Cmd: cmdEndScan})
 			log.Printf("Closing TCP connection to %v", adr)

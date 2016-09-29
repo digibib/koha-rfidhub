@@ -38,8 +38,8 @@ func newHub(cfg config) *Hub {
 		cfg:           cfg,
 		ipAdresses:    make(map[string]*uiConn),
 		uiConnections: make(map[*uiConn]bool),
-		uiReg:         make(chan *uiConn, 10),
-		uiUnReg:       make(chan *uiConn, 10),
+		uiReg:         make(chan *uiConn),
+		uiUnReg:       make(chan *uiConn),
 		closed:        make(chan bool),
 	}
 }

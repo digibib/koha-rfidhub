@@ -26,7 +26,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := &uiConn{
-		send: make(chan UIMsg, 10),
+		send: make(chan UIMsg),
 		ws:   ws}
 
 	hub.uiReg <- c
